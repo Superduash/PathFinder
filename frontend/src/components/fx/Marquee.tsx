@@ -14,3 +14,4 @@ export const Marquee: React.FC<{ items: string[] }> = ({ items }) => {
     </div>
   );
 };
+

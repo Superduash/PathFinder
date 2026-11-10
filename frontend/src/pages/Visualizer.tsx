@@ -4,27 +4,45 @@ import {
   Pause,
   RotateCcw,
   StepForward,
-  Sparkles,
+  Dices,
+  Layers,
+  Flag,
+  Target,
+  Eraser,
+  Square,
+  Waves,
 } from "lucide-react";
 import { useAppStore, type ToolType } from "@/store/useAppStore";
 import { useRace } from "@/hooks/useRace";
 import { useMazeCanvas } from "@/hooks/useMazeCanvas";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { RacePanel } from "@/components/RacePanel";
+import { Legend } from "@/components/maze/Legend";
+import { NarratorBar } from "@/components/maze/NarratorBar";
+import { WinnerBanner } from "@/components/maze/WinnerBanner";
+import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { request } from "@/lib/api";
 import { notify } from "@/lib/notify";
 import type { Maze } from "@/lib/types";
 
-const SPEED_K_MAP = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55];
+const PRESET_CARDS = [
+  { id: "open_field", name: "Open Field", desc: "No obstacles. Compares pure exploration spread." },
+  { id: "wall_with_gap", name: "Wall with a Gap", desc: "Tests ability to navigate through narrow apertures." },
+  { id: "greedy_trap", name: "Greedy Trap", desc: "U-shaped trap that lures distance-heuristic searches." },
+  { id: "weighted_river", name: "River Crossing", desc: "Weighted water & sand terrain favoring UCS over BFS." },
+  { id: "corridor_maze", name: "Twisty Corridors", desc: "Narrow maze passages where DFS searches deep." },
+  { id: "unreachable_goal", name: "Impossible Goal", desc: "Walled-off goal testing exhaustive search limits." },
+];
 
-const AVAILABLE_ALGS = [
-  { id: "bfs", name: "BFS", color: "#4C9AFF" },
-  { id: "dfs", name: "DFS", color: "#FF9F43" },
-  { id: "ucs", name: "UCS", color: "#F2C94C" },
-  { id: "greedy", name: "Greedy", color: "#E86AB8", defaultHeuristic: "manhattan" },
-  { id: "astar", name: "A*", color: "#5BD68A", defaultHeuristic: "manhattan" },
+const AVAILABLE_RACERS = [
+  { id: "bfs", name: "BFS", desc: "Checks cells ring by ring", color: "var(--alg-bfs)", shape: "●" },
+  { id: "dfs", name: "DFS", desc: "Dives deep along single corridors", color: "var(--alg-dfs)", shape: "▲" },
+  { id: "ucs", name: "UCS (Dijkstra)", desc: "Always expands lowest cost route", color: "var(--alg-ucs)", shape: "■" },
+  { id: "greedy", name: "Greedy", desc: "Rushes directly towards goal", color: "var(--alg-greedy)", shape: "◆", hasHeuristic: true },
+  { id: "astar", name: "A*", desc: "Balances cost so far + distance hint", color: "var(--alg-astar)", shape: "★", hasHeuristic: true },
 ];
 
 export const VisualizerPage: React.FC = () => {
@@ -40,25 +58,26 @@ export const VisualizerPage: React.FC = () => {
     updateCell,
   } = useAppStore();
 
+  const [activeTab, setActiveTab] = useState("maze");
   const [rows, setRows] = useState(21);
   const [cols, setCols] = useState(21);
   const [genType, setGenType] = useState("backtracker");
-  const [density] = useState(0.3);
+  const [density] = useState(0.25);
   const [diagonal, setDiagonal] = useState(false);
-  const [weighted] = useState(false);
-  const [hoverCell] = useState<[number, number] | null>(null);
-
-  const expansionsPerTick = SPEED_K_MAP[speed - 1] || 5;
+  const [weighted, setWeighted] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(1);
 
   const {
     raceState,
     stats,
     winnerIdx,
+    countdown,
+    pacing,
     startRace,
     pauseRace,
     stepRace,
     resetRace,
-  } = useRace(maze, participants, expansionsPerTick);
+  } = useRace(maze, participants, speed);
 
   // Generate Maze
   const handleGenerate = async (seedOverride?: number) => {
@@ -79,7 +98,8 @@ export const VisualizerPage: React.FC = () => {
       });
       setMaze(generated);
       resetRace();
-      notify.success(`Maze ${rows}×${cols} generated (${genType})`);
+      setCurrentStepIndex(2);
+      notify.success(`Maze ${rows}×${cols} generated`);
     } catch (err) {
       notify.error(err);
     }
@@ -96,13 +116,13 @@ export const VisualizerPage: React.FC = () => {
       setRows(presetMaze.rows);
       setCols(presetMaze.cols);
       resetRace();
-      notify.success(`Preset '${presetName}' loaded`);
+      setCurrentStepIndex(2);
+      notify.success(`Loaded preset '${presetName}'`);
     } catch (err) {
       notify.error(err);
     }
   };
 
-  // Initial maze on first load
   useEffect(() => {
     if (!maze) {
       handleGenerate(42);
@@ -132,23 +152,25 @@ export const VisualizerPage: React.FC = () => {
     maze,
     interactive: raceState === "idle" || raceState === "ready",
     onCellClick: handleCellClick,
-    hoverCell,
   });
 
-  // Hotkeys: Space (Start/Pause), S (Step), R (Reset)
+  // Hotkeys
   useHotkeys([
     {
       key: " ",
       handler: () => {
         if (raceState === "running") pauseRace();
-        else startRace();
+        else {
+          setCurrentStepIndex(3);
+          startRace();
+        }
       },
     },
     { key: "s", handler: () => stepRace() },
     { key: "r", handler: () => resetRace() },
   ]);
 
-  const toggleParticipant = (algId: string, defaultH?: string) => {
+  const toggleParticipant = (algId: string) => {
     const exists = participants.some((p) => p.algorithm === algId);
     if (exists) {
       if (participants.length > 1) {
@@ -160,7 +182,7 @@ export const VisualizerPage: React.FC = () => {
       if (participants.length < 5) {
         setParticipants([
           ...participants,
-          { algorithm: algId, heuristic: defaultH || null },
+          { algorithm: algId, heuristic: algId === "greedy" || algId === "astar" ? "manhattan" : null },
         ]);
       } else {
         notify.warning("Maximum 5 participants allowed");
@@ -168,240 +190,314 @@ export const VisualizerPage: React.FC = () => {
     }
   };
 
-  const isEditingLocked = raceState === "running" || raceState === "paused";
+  const maxExpandedSeen = Math.max(1, ...stats.map((s) => s.expanded));
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-      {/* Left Sidebar Controls */}
-      <aside className="w-full md:w-80 border-r border-border bg-surface p-4 flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-3.5rem)] text-xs">
-        {/* Race playback toolbar */}
-        <div className="p-3 bg-surface-2 border border-border rounded-xl flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-text uppercase tracking-wider text-[11px]">Race Controls</span>
-            <span className="font-mono text-[10px] text-text-muted">k = {expansionsPerTick} / tick</span>
-          </div>
-
-          <div className="grid grid-cols-4 gap-1.5">
-            {raceState === "running" ? (
-              <button
-                onClick={pauseRace}
-                className="col-span-2 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-warning text-bg font-semibold hover:opacity-90 transition-opacity"
-              >
-                <Pause className="w-4 h-4 fill-current" /> Pause
-              </button>
-            ) : (
-              <button
-                onClick={startRace}
-                className="col-span-2 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-accent text-bg font-semibold hover:opacity-90 transition-opacity"
-              >
-                <Play className="w-4 h-4 fill-current" /> {raceState === "paused" ? "Resume" : "Start Race"}
-              </button>
-            )}
-
-            <button
-              onClick={stepRace}
-              disabled={raceState === "running"}
-              className="flex items-center justify-center py-2 px-2 rounded-lg bg-surface border border-border text-text hover:bg-surface/80 disabled:opacity-40"
-              title="Step 1 expansion (S)"
-            >
-              <StepForward className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={resetRace}
-              className="flex items-center justify-center py-2 px-2 rounded-lg bg-surface border border-border text-text hover:bg-surface/80"
-              title="Reset Race (R)"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Speed slider */}
-          <div className="pt-2">
-            <div className="flex justify-between text-text-muted mb-1 text-[11px]">
-              <span>Speed</span>
-              <span>Level {speed} / 10</span>
-            </div>
-            <Slider
-              value={[speed]}
-              min={1}
-              max={10}
-              step={1}
-              onValueChange={([val]) => setSpeed(val)}
-            />
-          </div>
+    <div className="flex-1 flex flex-col max-w-[1600px] w-full mx-auto px-6 py-6 gap-6">
+      {/* 5.1 Step Indicator Header Strip */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-text">Visualizer</h1>
+          <p className="text-muted text-xs mt-0.5">
+            Stepwise algorithm comparison with real-time expansion counters and continuous canvas editing.
+          </p>
         </div>
 
-        {/* Maze Config Card */}
-        <div className={`p-3 bg-surface-2 border border-border rounded-xl flex flex-col gap-3 ${isEditingLocked ? "opacity-50 pointer-events-none" : ""}`}>
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-text uppercase tracking-wider text-[11px]">Maze Generation</span>
-            <button
-              onClick={() => handleGenerate()}
-              className="flex items-center gap-1 text-accent hover:underline font-semibold"
-            >
-              <Sparkles className="w-3.5 h-3.5" /> Generate
-            </button>
-          </div>
-
-          {/* Size sliders */}
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between text-text-muted">
-              <span>Grid Size</span>
-              <span className="font-mono">{rows} × {cols}</span>
-            </div>
-            <Slider
-              value={[rows]}
-              min={9}
-              max={51}
-              step={2}
-              onValueChange={([val]) => {
-                setRows(val);
-                setCols(val);
+        {/* Step indicator */}
+        <div className="flex items-center gap-2 text-xs font-semibold">
+          {[
+            { num: 1, label: "Build maze" },
+            { num: 2, label: "Choose racers" },
+            { num: 3, label: "Race" },
+          ].map((s) => (
+            <div
+              key={s.num}
+              onClick={() => {
+                if (s.num === 1) setActiveTab("maze");
+                if (s.num === 2) setActiveTab("racers");
+                if (s.num === 3) setActiveTab("race");
+                setCurrentStepIndex(s.num);
               }}
-            />
-          </div>
-
-          {/* Generator selection */}
-          <div className="grid grid-cols-2 gap-1.5">
-            {["backtracker", "braided", "random", "weighted"].map((t) => (
-              <button
-                key={t}
-                onClick={() => setGenType(t)}
-                className={`py-1.5 px-2 rounded border text-center capitalize transition-colors ${
-                  genType === t
-                    ? "bg-surface border-accent text-accent font-semibold"
-                    : "bg-surface/50 border-border text-text-muted hover:text-text"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          {/* Presets */}
-          <div className="flex flex-col gap-1">
-            <span className="text-text-muted text-[10px]">PRESET PATTERNS</span>
-            <div className="grid grid-cols-2 gap-1">
-              {["greedy_trap", "weighted_river", "corridor_maze", "unreachable_goal"].map((p) => (
-                <button
-                  key={p}
-                  onClick={() => handleLoadPreset(p)}
-                  className="py-1 px-1.5 rounded bg-surface border border-border text-text-muted hover:text-text text-[11px] truncate text-left"
-                >
-                  {p.replace("_", " ")}
-                </button>
-              ))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full cursor-pointer transition-all ${
+                currentStepIndex === s.num
+                  ? "bg-brand text-brand-ink shadow-sm"
+                  : currentStepIndex > s.num
+                  ? "bg-brand/15 text-brand border border-brand/30"
+                  : "bg-surface-2 text-muted border border-border"
+              }`}
+            >
+              <span>{s.num}</span>
+              <span>{s.label}</span>
             </div>
-          </div>
-
-          {/* Diagonal switch */}
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-text-muted">Diagonal Moves</span>
-            <Switch checked={diagonal} onCheckedChange={setDiagonal} />
-          </div>
+          ))}
         </div>
+      </div>
 
-        {/* Tools Toolbar */}
-        <div className={`p-3 bg-surface-2 border border-border rounded-xl flex flex-col gap-2 ${isEditingLocked ? "opacity-50 pointer-events-none" : ""}`}>
-          <span className="font-semibold text-text uppercase tracking-wider text-[11px]">Paint Tools</span>
-          <div className="grid grid-cols-3 gap-1.5">
-            {(["wall", "erase", "sand", "water", "start", "goal"] as ToolType[]).map((tool) => (
-              <button
-                key={tool}
-                onClick={() => setSelectedTool(tool)}
-                className={`py-1.5 px-2 rounded-lg border text-center capitalize transition-all ${
-                  selectedTool === tool
-                    ? "bg-accent/20 border-accent text-accent font-semibold"
-                    : "bg-surface border-border text-text-muted hover:text-text"
-                }`}
-              >
-                {tool}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Main Two-Column Layout */}
+      <div className="flex flex-col xl:flex-row gap-8 items-start">
+        {/* Left Control Panel (380px, sticky) */}
+        <aside className="w-full xl:w-[380px] shrink-0 sticky top-20 flex flex-col gap-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="w-full grid grid-cols-3 h-11 bg-surface-2 p-1 rounded-xl">
+              <TabsTrigger value="maze">1. Maze</TabsTrigger>
+              <TabsTrigger value="racers">2. Racers</TabsTrigger>
+              <TabsTrigger value="race">3. Playback</TabsTrigger>
+            </TabsList>
 
-        {/* Algorithms selector */}
-        <div className={`p-3 bg-surface-2 border border-border rounded-xl flex flex-col gap-2 ${isEditingLocked ? "opacity-50 pointer-events-none" : ""}`}>
-          <span className="font-semibold text-text uppercase tracking-wider text-[11px]">Algorithms ({participants.length}/5)</span>
-          <div className="flex flex-col gap-1.5">
-            {AVAILABLE_ALGS.map((alg) => {
-              const selected = participants.some((p) => p.algorithm === alg.id);
-              return (
-                <div
-                  key={alg.id}
-                  onClick={() => toggleParticipant(alg.id, alg.defaultHeuristic)}
-                  className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-colors ${
-                    selected
-                      ? "bg-surface border-border"
-                      : "bg-surface/30 border-transparent text-text-muted opacity-60"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: alg.color }}
-                    />
-                    <span className="font-medium text-text">{alg.name}</span>
-                  </div>
-                  <Switch checked={selected} />
+            {/* TAB 1: MAZE */}
+            <TabsContent value="maze" className="flex flex-col gap-4 mt-3">
+              {/* Presets Grid */}
+              <div className="p-4 rounded-2xl border border-border bg-surface flex flex-col gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Quick Presets
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {PRESET_CARDS.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleLoadPreset(p.id)}
+                      className="p-2.5 rounded-xl border border-border bg-surface-2/60 hover:bg-surface-2 hover:border-brand/40 text-left transition-all"
+                    >
+                      <span className="font-semibold text-text text-xs block">{p.name}</span>
+                      <span className="text-[11px] text-muted line-clamp-1 mt-0.5">{p.desc}</span>
+                    </button>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Workspace Stage */}
-      <section className="flex-1 bg-bg p-4 md:p-6 flex flex-col overflow-y-auto">
-        {/* Race Mode: Multi-panel grid */}
-        {raceState !== "idle" && stats.length > 0 ? (
-          <div className="flex-1 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="text-xs text-text-muted font-mono">
-                RACE MODE: <span className="text-accent uppercase font-semibold">{raceState}</span>
               </div>
-              {winnerIdx !== null && stats[winnerIdx] && (
-                <div className="px-3 py-1 rounded-full bg-accent/20 border border-accent/40 text-accent text-xs font-bold animate-pulse">
-                  🏆 Winner by search effort: {stats[winnerIdx].algorithm.toUpperCase()} ({stats[winnerIdx].expanded} expansions)
-                </div>
-              )}
-            </div>
 
-            <div className={`grid gap-4 flex-1 ${
-              stats.length === 1
-                ? "grid-cols-1 max-w-xl mx-auto w-full"
-                : stats.length === 2
-                ? "grid-cols-1 md:grid-cols-2"
-                : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-            }`}>
+              {/* Maze Generator Form */}
+              <div className="p-4 rounded-2xl border border-border bg-surface flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    Generate Maze
+                  </span>
+                  <span className="font-mono text-xs text-brand">{rows} × {cols}</span>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs text-muted">Size: {rows} × {cols}</span>
+                  <Slider
+                    value={[rows]}
+                    min={11}
+                    max={45}
+                    step={2}
+                    onValueChange={([v]) => {
+                      setRows(v);
+                      setCols(v);
+                    }}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "backtracker", label: "Twisty Corridors" },
+                    { id: "braided", label: "Loops (Braided)" },
+                    { id: "random", label: "Random Walls" },
+                    { id: "weighted", label: "Terrain Blobs" },
+                  ].map((style) => (
+                    <button
+                      key={style.id}
+                      onClick={() => setGenType(style.id)}
+                      className={`p-2 rounded-lg border text-xs font-medium text-center transition-colors ${
+                        genType === style.id
+                          ? "bg-brand text-brand-ink border-brand font-semibold"
+                          : "bg-surface-2 border-border text-muted hover:text-text"
+                      }`}
+                    >
+                      {style.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-muted">Diagonal Movement</span>
+                  <Switch checked={diagonal} onCheckedChange={setDiagonal} />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted">Sand &amp; Water Terrain</span>
+                  <Switch checked={weighted} onCheckedChange={setWeighted} />
+                </div>
+
+                <Button onClick={() => handleGenerate()} className="w-full gap-2 mt-1">
+                  <Dices className="w-4 h-4" /> Generate New Maze
+                </Button>
+              </div>
+
+              {/* Painting Tools Toolbar */}
+              <div className="p-4 rounded-2xl border border-border bg-surface flex flex-col gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Draw Tools
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "wall", label: "Wall", icon: Square },
+                    { id: "erase", label: "Erase", icon: Eraser },
+                    { id: "start", label: "Start", icon: Flag },
+                    { id: "goal", label: "Goal", icon: Target },
+                    { id: "sand", label: "Sand", icon: Layers },
+                    { id: "water", label: "Water", icon: Waves },
+                  ].map((t) => {
+                    const Icon = t.icon;
+                    const isSelected = selectedTool === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setSelectedTool(t.id as ToolType)}
+                        className={`flex flex-col items-center justify-center p-2 rounded-xl border text-xs gap-1 transition-all ${
+                          isSelected
+                            ? "bg-brand/15 border-brand text-brand font-bold"
+                            : "bg-surface-2 border-border text-muted hover:text-text"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* TAB 2: RACERS */}
+            <TabsContent value="racers" className="flex flex-col gap-3 mt-3">
+              <div className="p-4 rounded-2xl border border-border bg-surface flex flex-col gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Choose Racers ({participants.length}/5)
+                </span>
+
+                <div className="flex flex-col gap-2">
+                  {AVAILABLE_RACERS.map((racer) => {
+                    const selected = participants.some((p) => p.algorithm === racer.id);
+                    return (
+                      <div
+                        key={racer.id}
+                        className={`p-3.5 rounded-xl border flex items-center justify-between transition-colors ${
+                          selected
+                            ? "border-border bg-surface-2"
+                            : "border-border/40 bg-surface-2/30 opacity-60"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-lg" style={{ color: racer.color }}>
+                            {racer.shape}
+                          </span>
+                          <div>
+                            <span className="font-bold text-sm text-text block">{racer.name}</span>
+                            <span className="text-xs text-muted">{racer.desc}</span>
+                          </div>
+                        </div>
+                        <Switch checked={selected} onCheckedChange={() => toggleParticipant(racer.id)} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* TAB 3: PLAYBACK */}
+            <TabsContent value="race" className="flex flex-col gap-4 mt-3">
+              <div className="p-4 rounded-2xl border border-border bg-surface flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    Speed Pacing
+                  </span>
+                  <span className="text-xs font-semibold text-brand">{pacing.description}</span>
+                </div>
+
+                <Slider
+                  value={[speed]}
+                  min={1}
+                  max={10}
+                  step={1}
+                  onValueChange={([val]) => setSpeed(val)}
+                />
+
+                <div className="grid grid-cols-4 gap-2 pt-2">
+                  {raceState === "running" ? (
+                    <Button variant="danger" onClick={pauseRace} className="col-span-2 gap-1.5">
+                      <Pause className="w-4 h-4 fill-current" /> Pause
+                    </Button>
+                  ) : (
+                    <Button onClick={startRace} className="col-span-2 gap-1.5 font-bold">
+                      <Play className="w-4 h-4 fill-current" />
+                      {raceState === "paused" ? "Resume" : "Start Race"}
+                    </Button>
+                  )}
+
+                  <Button variant="secondary" onClick={stepRace} title="Step 1 expansion">
+                    <StepForward className="w-4 h-4" />
+                  </Button>
+
+                  <Button variant="outline" onClick={resetRace} title="Reset race">
+                    <RotateCcw className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </aside>
+
+        {/* Right Stage (flex-1) */}
+        <section className="flex-1 w-full flex flex-col gap-6">
+          {/* Narrator Bar */}
+          <NarratorBar stats={stats} raceState={raceState} />
+
+          {/* Winner Banner on finish */}
+          {raceState === "finished" && winnerIdx !== null && stats[winnerIdx] && (
+            <WinnerBanner
+              winner={stats[winnerIdx]}
+              totalParticipants={stats.length}
+              onRaceAgain={startRace}
+              onNewMaze={() => handleGenerate()}
+            />
+          )}
+
+          {/* Canvas Viewport or Multi-Panel Grid */}
+          {raceState !== "idle" && stats.length > 0 ? (
+            <div
+              className={`grid gap-6 w-full ${
+                stats.length === 1
+                  ? "grid-cols-1 max-w-2xl mx-auto"
+                  : stats.length === 2
+                  ? "grid-cols-1 md:grid-cols-2"
+                  : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+              }`}
+            >
               {stats.map((s, idx) => (
                 <RacePanel
                   key={`${s.algorithm}_${idx}`}
                   maze={maze!}
                   stats={s}
                   isWinner={winnerIdx === idx}
+                  maxExpandedSeen={maxExpandedSeen}
                 />
               ))}
             </div>
-          </div>
-        ) : (
-          /* Edit Mode: One large interactive canvas */
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="relative w-full max-w-2xl aspect-square border border-border rounded-xl overflow-hidden shadow-2xl bg-surface">
-              <canvas
-                ref={canvasRef}
-                className="w-full h-full block cursor-crosshair touch-none select-none"
-                {...handlers}
-              />
+          ) : (
+            <div className="w-full flex flex-col items-center">
+              <div className="relative w-full max-w-3xl aspect-square rounded-2xl border border-border bg-surface overflow-hidden shadow-xl">
+                <canvas
+                  ref={canvasRef}
+                  className="w-full h-full block cursor-crosshair touch-none select-none"
+                  {...handlers}
+                />
+                {/* 3-2-1 Countdown Overlay */}
+                {countdown !== null && (
+                  <div className="absolute inset-0 bg-bg/75 flex items-center justify-center z-30">
+                    <span className="text-7xl font-extrabold text-brand animate-ping">
+                      {countdown}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="mt-3 text-center text-xs text-text-muted font-mono">
-              Click or drag to paint with tool: <span className="text-accent uppercase font-bold">{selectedTool}</span>. Press <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border text-text">Space</kbd> to race.
-            </div>
-          </div>
-        )}
-      </section>
+          )}
+
+          {/* Maze Legend Always Visible */}
+          <Legend />
+        </section>
+      </div>
     </div>
   );
 };

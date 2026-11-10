@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import confetti from "canvas-confetti";
 import { RaceSocket } from "@/lib/ws";
-import { notify } from "@/lib/notify";
+import { getPacing } from "@/lib/pacing";
 import type { Maze, Participant } from "@/lib/types";
 
 export interface ParticipantStats {
@@ -18,17 +18,22 @@ export interface ParticipantStats {
   rank?: number;
   exploredSet: Set<string>;
   frontierSet: Set<string>;
+  currentNode?: [number, number] | null;
   path?: [number, number][] | null;
 }
 
-export function useRace(maze: Maze | null, participants: Participant[], speedExpansions: number) {
+export function useRace(maze: Maze | null, participants: Participant[], speedLevel: number) {
   const socketRef = useRef<RaceSocket | null>(null);
   const [raceState, setRaceState] = useState<"idle" | "ready" | "running" | "paused" | "finished" | "disconnected">("idle");
   const [stats, setStats] = useState<ParticipantStats[]>([]);
   const [winnerIdx, setWinnerIdx] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   const isRunningRef = useRef(false);
   const inFlightRef = useRef(false);
+  const timerRef = useRef<any>(null);
+
+  const pacing = getPacing(speedLevel);
 
   // Initialize socket
   useEffect(() => {
@@ -36,16 +41,12 @@ export function useRace(maze: Maze | null, participants: Participant[], speedExp
     socketRef.current = socket;
 
     socket.on("open", () => {
-      if (raceState === "disconnected") {
-        setRaceState("idle");
-        notify.success("Connected to race session");
-      }
+      setRaceState((prev) => (prev === "disconnected" ? "idle" : prev));
     });
 
     socket.on("close", () => {
       setRaceState("disconnected");
       isRunningRef.current = false;
-      notify.error(new Error("Race socket disconnected"));
     });
 
     socket.on("race.ready", (msg: any) => {
@@ -59,6 +60,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedExp
         computeMs: p.compute_ms,
         exploredSet: new Set<string>(),
         frontierSet: new Set<string>(),
+        currentNode: null,
         path: null,
       }));
       setStats(initialStats);
@@ -74,9 +76,12 @@ export function useRace(maze: Maze | null, participants: Participant[], speedExp
           if (!p) return item;
 
           const nextExplored = new Set(item.exploredSet);
+          let lastNode: [number, number] | null = item.currentNode || null;
+
           if (p.delta_expanded) {
             for (const [r, c] of p.delta_expanded) {
               nextExplored.add(`${r},${c}`);
+              lastNode = [r, c];
             }
           }
 
@@ -103,6 +108,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedExp
             pathCost: p.path_cost,
             optimality: p.optimality,
             path: p.path || item.path,
+            currentNode: lastNode,
             exploredSet: nextExplored,
             frontierSet: nextFrontier,
           };
@@ -120,7 +126,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedExp
         const topWinner = msg.ranking[0];
         setWinnerIdx(topWinner);
         try {
-          confetti({ particleCount: 60, spread: 55, origin: { y: 0.6 } });
+          confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
         } catch {}
       }
     });
@@ -132,28 +138,35 @@ export function useRace(maze: Maze | null, participants: Participant[], speedExp
     };
   }, []);
 
-  // Tick loop
+  // Chained setTimeout pacing loop
   useEffect(() => {
-    let timer: any = null;
+    let active = true;
 
-    const tick = () => {
-      if (isRunningRef.current && socketRef.current && !inFlightRef.current) {
+    const scheduleTick = () => {
+      if (!active || !isRunningRef.current || !socketRef.current) return;
+
+      if (!inFlightRef.current) {
         inFlightRef.current = true;
         socketRef.current.send({
           type: "race.step",
-          k: speedExpansions,
+          k: pacing.k,
         });
       }
+
+      timerRef.current = setTimeout(scheduleTick, pacing.intervalMs);
     };
 
     if (raceState === "running") {
-      timer = setInterval(tick, 33); // ~30 fps tick rate
+      scheduleTick();
+    } else {
+      if (timerRef.current) clearTimeout(timerRef.current);
     }
 
     return () => {
-      if (timer) clearInterval(timer);
+      active = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [raceState, speedExpansions]);
+  }, [raceState, pacing.intervalMs, pacing.k]);
 
   const initRace = useCallback(() => {
     if (!maze || !socketRef.current) return;
@@ -163,20 +176,30 @@ export function useRace(maze: Maze | null, participants: Participant[], speedExp
       raceId: `race_${Date.now()}`,
       maze,
       participants,
-      k: speedExpansions,
+      k: pacing.k,
     });
-  }, [maze, participants, speedExpansions]);
+  }, [maze, participants, pacing.k]);
 
-  const startRace = () => {
+  // Start with 3-2-1 countdown overlay
+  const startRaceWithCountdown = () => {
     if (raceState === "ready" || raceState === "paused") {
       isRunningRef.current = true;
       setRaceState("running");
-    } else if (raceState === "idle" || raceState === "finished") {
+    } else {
       initRace();
-      setTimeout(() => {
-        isRunningRef.current = true;
-        setRaceState("running");
-      }, 150);
+      setCountdown(3);
+      const cTimer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(cTimer);
+            setCountdown(null);
+            isRunningRef.current = true;
+            setRaceState("running");
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 600);
     }
   };
 
@@ -201,6 +224,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedExp
     isRunningRef.current = false;
     setRaceState("idle");
     setWinnerIdx(null);
+    setCountdown(null);
     setStats([]);
     socketRef.current?.send({ type: "race.reset" });
   };
@@ -209,11 +233,12 @@ export function useRace(maze: Maze | null, participants: Participant[], speedExp
     raceState,
     stats,
     winnerIdx,
-    startRace,
+    countdown,
+    pacing,
+    startRace: startRaceWithCountdown,
     pauseRace,
     stepRace,
     resetRace,
     initRace,
   };
 }
-
