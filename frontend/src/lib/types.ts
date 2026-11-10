@@ -129,6 +129,21 @@ export interface MetaResponse {
   };
 }
 
+export interface JobProgress {
+  done: number;
+  total: number;
+  label: string;
+}
+
+export interface JobStatus {
+  jobId: string;
+  kind: string;
+  status: "queued" | "running" | "done" | "error" | "cancelled";
+  progress: JobProgress;
+  result?: any;
+  error?: string | null;
+}
+
 export interface ApiErrorEnvelope {
   error: {
     code: string;

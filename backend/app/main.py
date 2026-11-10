@@ -1,13 +1,12 @@
-"""FastAPI application initialization, middleware, routes, and static mounts."""
+"""FastAPI application initialization, middleware, routes, WebSocket, and static mounts."""
 from __future__ import annotations
-import os
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.app.errors import ApiError, api_error_handler
-from backend.app.routes import health, maze, solve, meta, benchmark
+from backend.app.routes import health, maze, solve, meta, benchmark, ws, jobs_api, ml
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIST = ROOT_DIR / "frontend" / "dist"
@@ -36,8 +35,12 @@ app.include_router(maze.router, prefix="/api", tags=["maze"])
 app.include_router(solve.router, prefix="/api", tags=["solve"])
 app.include_router(meta.router, prefix="/api", tags=["meta"])
 app.include_router(benchmark.router, prefix="/api", tags=["benchmark"])
+app.include_router(jobs_api.router, prefix="/api", tags=["jobs"])
+app.include_router(ml.router, prefix="/api", tags=["ml"])
+
+# WebSocket router
+app.include_router(ws.router, tags=["websocket"])
 
 # Mount frontend/dist if available
 if FRONTEND_DIST.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="frontend")
-

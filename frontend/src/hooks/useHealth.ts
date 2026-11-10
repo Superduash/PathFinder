@@ -10,3 +10,4 @@ export function useHealth() {
     retry: 1,
   });
 }
+
