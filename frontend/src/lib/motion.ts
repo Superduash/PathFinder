@@ -1,27 +1,35 @@
 import type { Transition, Variants } from "motion/react";
 
-export const springTransition: Transition = {
+export const springSoft: Transition = {
   type: "spring",
-  stiffness: 260,
-  damping: 28,
+  stiffness: 220,
+  damping: 26,
 };
 
-export const pageFadeRise: Variants = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.16, ease: "easeOut" } },
-  exit: { opacity: 0, y: -8, transition: { duration: 0.12, ease: "easeIn" } },
-};
-
-export const cardStagger: Variants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: (i: number = 0) => ({
+export const fadeUp: Variants = {
+  initial: { opacity: 0, y: 16 },
+  animate: {
     opacity: 1,
     y: 0,
     transition: {
-      delay: i * 0.04,
-      duration: 0.18,
-      ease: "easeOut",
+      duration: 0.45,
+      ease: [0.22, 1, 0.36, 1],
     },
-  }),
+  },
+  exit: {
+    opacity: 0,
+    y: -12,
+    transition: { duration: 0.2, ease: "easeIn" },
+  },
 };
 
+export const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.05,
+    },
+  },
+};

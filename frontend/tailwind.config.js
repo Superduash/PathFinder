@@ -13,22 +13,55 @@ export default {
         "surface-2": "var(--surface-2)",
         border: "var(--border)",
         text: "var(--text)",
-        "text-muted": "var(--text-muted)",
-        accent: "var(--accent)",
+        muted: "var(--muted)",
+        brand: {
+          DEFAULT: "var(--brand)",
+          ink: "var(--brand-ink)",
+        },
+        warn: "var(--warn)",
         danger: "var(--danger)",
-        warning: "var(--warning)",
         success: "var(--success)",
+        alg: {
+          bfs: "var(--alg-bfs)",
+          dfs: "var(--alg-dfs)",
+          ucs: "var(--alg-ucs)",
+          greedy: "var(--alg-greedy)",
+          astar: "var(--alg-astar)",
+        },
       },
       borderRadius: {
+        xl: "16px",
         lg: "12px",
         md: "8px",
-        sm: "4px",
+        sm: "6px",
+        full: "999px",
       },
       fontFamily: {
         sans: ["Inter Variable", "sans-serif"],
-        mono: ["JetBrains Mono Variable", "monospace"],
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+        "marquee": "marquee 35s linear infinite",
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "marquee": {
+          from: { transform: "translateX(0%)" },
+          to: { transform: "translateX(-50%)" },
+        },
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/typography"),
+  ],
 }

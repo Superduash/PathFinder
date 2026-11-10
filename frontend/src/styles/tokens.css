@@ -1,20 +1,55 @@
-:root {
-  --bg: #0E1116;
-  --surface: #151A21;
-  --surface-2: #1C222B;
-  --border: #2A323D;
-  --text: #E6EAF0;
-  --text-muted: #9AA5B1;
-  --accent: #3DD6C6;
-  --danger: #FF6B6B;
-  --warning: #F2C94C;
-  --success: #5BD68A;
+/* PathFinder design tokens (Midnight Dark & Paper Light) */
 
-  /* Algorithm Colors */
-  --alg-bfs: #4C9AFF;
-  --alg-dfs: #FF9F43;
-  --alg-ucs: #F2C94C;
-  --alg-greedy: #E86AB8;
-  --alg-astar: #5BD68A;
+:root {
+  --bg: #FAFAF7;
+  --surface: #FFFFFF;
+  --surface-2: #F3F2EE;
+  --border: #E7E5DF;
+  --text: #14161B;
+  --muted: #5F6675;
+  --brand: #0D9488;
+  --brand-ink: #FFFFFF;
+  --warn: #D97706;
+  --danger: #DC2626;
+  --success: #16A34A;
+
+  /* Algorithm colours (Light) */
+  --alg-bfs: #0284C7;
+  --alg-dfs: #EA580C;
+  --alg-ucs: #7C3AED;
+  --alg-greedy: #DB2777;
+  --alg-astar: #059669;
+
+  --alg-bfs-soft: rgba(2, 132, 199, 0.15);
+  --alg-dfs-soft: rgba(234, 88, 12, 0.15);
+  --alg-ucs-soft: rgba(124, 58, 237, 0.15);
+  --alg-greedy-soft: rgba(219, 39, 119, 0.15);
+  --alg-astar-soft: rgba(5, 150, 105, 0.15);
 }
 
+.dark {
+  --bg: #0A0D14;
+  --surface: #11151F;
+  --surface-2: #171C28;
+  --border: #232A3A;
+  --text: #F2F4F8;
+  --muted: #8B94A7;
+  --brand: #2DD4BF;
+  --brand-ink: #04201C;
+  --warn: #FBBF24;
+  --danger: #F87171;
+  --success: #4ADE80;
+
+  /* Algorithm colours (Dark) */
+  --alg-bfs: #38BDF8;
+  --alg-dfs: #FB923C;
+  --alg-ucs: #A78BFA;
+  --alg-greedy: #F472B6;
+  --alg-astar: #34D399;
+
+  --alg-bfs-soft: rgba(56, 189, 248, 0.22);
+  --alg-dfs-soft: rgba(251, 146, 60, 0.22);
+  --alg-ucs-soft: rgba(167, 139, 250, 0.22);
+  --alg-greedy-soft: rgba(244, 114, 182, 0.22);
+  --alg-astar-soft: rgba(52, 211, 153, 0.22);
+}
