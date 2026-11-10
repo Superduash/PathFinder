@@ -80,7 +80,7 @@ export const VisualizerPage: React.FC = () => {
   } = useRace(maze, participants, speed);
 
   // Generate Maze
-  const handleGenerate = async (seedOverride?: number) => {
+  const handleGenerate = async (seedOverride?: number, suppressToast: boolean = false) => {
     try {
       const generated = await request<Maze>("/api/maze/generate", {
         method: "POST",
@@ -99,7 +99,9 @@ export const VisualizerPage: React.FC = () => {
       setMaze(generated);
       resetRace();
       setCurrentStepIndex(2);
-      notify.success(`Maze ${rows}×${cols} generated`);
+      if (!suppressToast) {
+        notify.success(`Maze ${rows}×${cols} generated (${genType})`);
+      }
     } catch (err) {
       notify.error(err);
     }
@@ -125,7 +127,7 @@ export const VisualizerPage: React.FC = () => {
 
   useEffect(() => {
     if (!maze) {
-      handleGenerate(42);
+      handleGenerate(42, true);
     }
   }, []);
 
