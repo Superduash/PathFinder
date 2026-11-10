@@ -1,15 +1,40 @@
+# Dependencies
 node_modules/
 dist/
+build/
+
+# Python cache & virtualenvs
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
 .venv/
 venv/
+ENV/
+env/
+
+# Data & Models
 backend/data/models/
-*.egg-info/
+*.joblib
+
+# Testing & Coverage
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
+
+# Logs & temp files
 *.log
+*.tmp
 .DS_Store
 Thumbs.db
+Desktop.ini
 
+# Documentation and planning markdown files (per project spec)
+*.md
+!README.md
+docs/*.md
+
+# Code export
+code.txt

@@ -101,3 +101,4 @@ export const RacePanel: React.FC<RacePanelProps> = ({ maze, stats, isWinner }) =
     </div>
   );
 };
+

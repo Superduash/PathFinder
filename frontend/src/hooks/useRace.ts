@@ -216,3 +216,4 @@ export function useRace(maze: Maze | null, participants: Participant[], speedExp
     initRace,
   };
 }
+

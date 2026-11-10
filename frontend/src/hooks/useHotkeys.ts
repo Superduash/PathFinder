@@ -38,3 +38,4 @@ export function useHotkeys(configs: HotkeyConfig[]) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [configs]);
 }
+
