@@ -1,0 +1,19 @@
+:root {
+  --bg: #0E1116;
+  --surface: #151A21;
+  --surface-2: #1C222B;
+  --border: #2A323D;
+  --text: #E6EAF0;
+  --text-muted: #9AA5B1;
+  --accent: #3DD6C6;
+  --danger: #FF6B6B;
+  --warning: #F2C94C;
+  --success: #5BD68A;
+
+  /* Algorithm Colors */
+  --alg-bfs: #4C9AFF;
+  --alg-dfs: #FF9F43;
+  --alg-ucs: #F2C94C;
+  --alg-greedy: #E86AB8;
+  --alg-astar: #5BD68A;
+}
