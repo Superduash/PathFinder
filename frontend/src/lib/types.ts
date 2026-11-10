@@ -129,6 +129,24 @@ export interface MetaResponse {
   };
 }
 
+export interface SizeSpec {
+  rows: number;
+  cols: number;
+}
+
+export interface BenchmarkConfig {
+  sizes: SizeSpec[];
+  densities: number[];
+  types: string[];
+  mazes_per_config: number;
+  participants: Participant[];
+  repeats: number;
+  base_seed: number;
+  ensure_solvable: boolean;
+  expansion_budget?: number | null;
+  diagonal?: boolean;
+}
+
 export interface JobProgress {
   done: number;
   total: number;
