@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PathFinder — AI Search Algorithm Visualizer and Benchmark</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" onerror="var s=document.createElement('script');s.src='/vendor/chart.umd.min.js';document.head.appendChild(s)"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <a class="brand" href="#/"><i data-lucide="route"></i><span>PathFinder</span></a>
+  <nav aria-label="Primary">
+    <a href="#/" data-nav="home">Home</a><a href="#/visualizer" data-nav="visualizer">Visualizer</a>
+    <a href="#/benchmark" data-nav="benchmark">Benchmark</a><a href="#/ml" data-nav="ml">ML Lab</a><a href="#/about" data-nav="about">About</a>
+  </nav>
+  <div class="conn" id="conn" role="status"><span class="dot"></span><span id="conn-text">Connecting…</span><button class="btn sm" id="retry" hidden>Retry</button></div>
+</header>
+<div id="banner" class="banner" role="alert" hidden><i data-lucide="wifi-off"></i> Backend not reachable. Start the server with <code>python run.py</code>, then Retry.</div>
+<main id="main">
+
+<section data-view="home" class="view">
+  <div class="hero">
+    <div>
+      <h1>Watch search algorithms think</h1>
+      <p class="lead">Race BFS, DFS, UCS, Greedy and A* on the same maze, then measure them honestly.</p>
+      <div class="row"><a class="btn primary" href="#/visualizer">Launch visualizer</a><button class="btn" id="how-btn">See how it works</button></div>
+    </div>
+    <div class="hero-vis"><div id="hero-mount" class="panels two"></div><div id="hero-static" class="static-grid" role="img" aria-label="Static grid illustration (backend offline)" hidden></div></div>
+  </div>
+  <h2 id="how">Algorithms</h2>
+  <div id="algo-cards" class="grid cards5"><div class="skeleton"></div></div>
+  <h2>What you can do</h2>
+  <div class="grid cards4">
+    <a class="card link" href="#/visualizer"><i data-lucide="flag"></i><h3>Race mode</h3><p>Side-by-side panels on the identical maze.</p></a>
+    <a class="card link" href="#/benchmark"><i data-lucide="chart-bar"></i><h3>Benchmark lab</h3><p>Timed batches, optimality and CSV export.</p></a>
+    <a class="card link" href="#/ml"><i data-lucide="brain"></i><h3>ML lab</h3><p>Learn a heuristic and predict the best algorithm.</p></a>
+    <a class="card link" href="#/visualizer"><i data-lucide="dices"></i><h3>Reproducible seeds</h3><p>Same seed, same maze, every time.</p></a>
+  </div>
+  <h2>How it works</h2>
+  <ol class="grid cards3 steps"><li class="card"><b>1 · Build a maze</b><p>Generate, load a preset, or paint walls and terrain.</p></li><li class="card"><b>2 · Race</b><p>Every algorithm gets the same expansions per tick.</p></li><li class="card"><b>3 · Measure</b><p>Benchmark on many mazes; nodes expanded is machine-independent.</p></li></ol>
+</section>
+
+<section data-view="visualizer" class="view" hidden>
+  <h1>Visualizer</h1>
+  <p class="muted">The race compares <b>search effort (expansions)</b>, not wall-clock time. Timings live in the Benchmark view.</p>
+  <div class="viz">
+    <aside class="controls" aria-label="Controls">
+      <fieldset id="maze-fs"><legend>Maze</legend>
+        <label>Rows <output id="o-rows">20</output><input type="range" id="v-rows" min="5" max="60" value="20"></label>
+        <label>Columns <output id="o-cols">30</output><input type="range" id="v-cols" min="5" max="60" value="30"></label>
+        <label>Type <select id="v-type"><option>empty</option><option selected>random</option><option>backtracker</option><option>braided</option></select></label>
+        <label>Density % <output id="o-dens">25</output><input type="range" id="v-density" min="0" max="60" value="25"></label>
+        <label class="inline"><input type="checkbox" id="v-weighted"> Weighted terrain</label>
+        <label>Terrain fraction % <output id="o-tfrac">25</output><input type="range" id="v-tfrac" min="5" max="60" value="25"></label>
+        <label class="inline"><input type="checkbox" id="v-diag"> Diagonal moves</label>
+        <label>Seed <span class="row"><input type="number" id="v-seed" placeholder="random"><button class="btn icon" id="v-newseed" title="New random seed" aria-label="New random seed"><i data-lucide="dices"></i></button></span></label>
+        <button class="btn primary" id="v-gen" data-needs-backend>Generate</button>
+        <label>Preset <span class="row"><select id="v-preset"></select><button class="btn" id="v-load" data-needs-backend>Load</button></span></label>
+        <div class="row wrap"><button class="btn" id="v-rand" data-needs-backend>Random start/goal</button><button class="btn" id="v-clrwalls">Clear walls</button><button class="btn" id="v-clrterr">Clear terrain</button></div>
+        <p class="err" id="v-error" role="alert"></p>
+      </fieldset>
+      <fieldset id="tools-fs"><legend>Tools</legend>
+        <div class="seg" id="tools">
+          <button data-tool="wall" aria-pressed="true">Wall</button><button data-tool="erase" aria-pressed="false">Erase</button><button data-tool="start" aria-pressed="false">Start</button>
+          <button data-tool="goal" aria-pressed="false">Goal</button><button data-tool="sand" aria-pressed="false">Sand</button><button data-tool="water" aria-pressed="false">Water</button>
+        </div>
+      </fieldset>
+      <fieldset id="algo-fs"><legend>Algorithms</legend><div id="algo-list"></div><p class="warn" id="diag-warn" hidden><i data-lucide="triangle-alert"></i> Manhattan is not admissible with diagonal moves.</p></fieldset>
+      <fieldset><legend>Race</legend>
+        <div class="row wrap">
+          <button class="btn primary" id="r-start"><i data-lucide="play"></i> Start</button><button class="btn" id="r-pause" disabled><i data-lucide="pause"></i> Pause</button>
+          <button class="btn" id="r-step"><i data-lucide="skip-forward"></i> Step</button><button class="btn" id="r-reset"><i data-lucide="rotate-ccw"></i> Reset</button>
+          <button class="btn" id="r-restart" hidden>Reconnect and restart</button>
+        </div>
+        <label>Speed <output id="o-speed">5</output> · <output id="o-k">5</output> expansions/tick<input type="range" id="r-speed" min="1" max="10" value="5"></label>
+      </fieldset>
+    </aside>
+    <div class="stage">
+      <p class="warn" id="unreach" hidden><i data-lucide="triangle-alert"></i> Goal unreachable — all algorithms will exhaust the search.</p>
+      <div id="edit-wrap" class="canvas-wrap"><canvas id="edit-canvas" role="img" aria-label="Maze editor"></canvas></div>
+      <div id="race-mount" class="panels" hidden></div>
+      <ul class="legend"><li><i class="sw wall"></i>Wall</li><li><i class="sw sand"></i>Sand (3)</li><li><i class="sw water"></i>Water (5)</li><li><i class="sw ex"></i>Explored</li><li><i class="sw fr"></i>Frontier</li><li>● S start</li><li>◆ G goal</li></ul>
+      <p id="race-status" class="status" aria-live="polite"></p>
+      <p id="summary" class="summary"></p>
+      <div id="cards" class="grid cards5"></div>
+    </div>
+  </div>
+</section>
+
+<section data-view="benchmark" class="view" hidden>
+  <h1>Benchmark</h1>
+  <p class="warn"><i data-lucide="triangle-alert"></i> Don't run a race while a benchmark runs. Timings are pure-Python on this machine; nodes expanded is the machine-independent comparison.</p>
+  <div class="card"><h2>Single-maze comparison</h2>
+    <div class="row wrap"><div class="thumb"><canvas id="cmp-thumb" role="img" aria-label="Current maze preview"></canvas></div><div><div id="cmp-algos" class="checks"></div>
+    <label>Repeats <input type="number" id="cmp-repeats" min="1" max="20" value="5"></label>
+    <button class="btn primary" id="cmp-run" data-needs-backend>Run comparison</button><p class="err" id="cmp-err" role="alert"></p></div></div>
+    <div class="scroll" id="cmp-out"></div>
+  </div>
+  <div class="card"><h2>Batch benchmark</h2>
+    <form id="b-form" class="form-grid">
+      <fieldset><legend>Sizes</legend><div class="checks" id="b-sizes"></div><label>Custom (e.g. 20x40, 25x25)<input id="b-custom" type="text"></label></fieldset>
+      <label>Densities (0–0.6, comma separated)<input id="b-dens" type="text" value="0.1, 0.25"></label>
+      <fieldset><legend>Types</legend><div class="checks" id="b-types"></div></fieldset>
+      <fieldset><legend>Algorithms</legend><div class="checks" id="b-algos"></div></fieldset>
+      <label>Mazes per config<input type="number" id="b-per" min="1" value="10"></label>
+      <label>Repeats (max 20)<input type="number" id="b-rep" min="1" max="20" value="5"></label>
+      <label>Base seed<input type="number" id="b-seed" value="1"></label>
+      <label>Expansion budget (optional)<input type="number" id="b-budget" min="1" placeholder="none"></label>
+      <label class="inline"><input type="checkbox" id="b-solv" checked> Ensure solvable</label>
+      <div class="row"><button class="btn primary" id="b-run" type="submit" data-needs-backend>Run benchmark</button><button class="btn" id="b-cancel" type="button" disabled>Cancel</button></div>
+    </form>
+    <p class="err" id="b-err" role="alert"></p>
+    <div aria-live="polite"><progress id="b-prog" value="0" max="1" hidden></progress> <span id="b-prog-l"></span></div>
+  </div>
+  <div id="b-empty" class="card empty"><i data-lucide="chart-bar"></i><p>No benchmark yet. Configure the form above and press <b>Run benchmark</b>.</p></div>
+  <div id="b-results" hidden>
+    <div class="card"><div class="row wrap"><h2>Summary</h2><button class="btn" id="csv-sum"><i data-lucide="download"></i> CSV (summary)</button><button class="btn" id="csv-rows"><i data-lucide="download"></i> CSV (all runs)</button></div><p id="b-env" class="muted"></p><div class="scroll" id="b-sum"></div></div>
+    <div class="grid cards2"><div class="card"><h3>Mean execution time (ms)</h3><canvas id="ch-time"></canvas></div><div class="card"><h3>Nodes expanded</h3><canvas id="ch-exp"></canvas></div>
+    <div class="card"><h3>Optimality (mean, min)</h3><canvas id="ch-opt"></canvas></div><div class="card"><h3>Time vs maze area</h3><canvas id="ch-area"></canvas></div></div>
+    <details class="card"><summary>Per-run table</summary><div class="scroll" id="b-rows"></div><div class="row"><button class="btn" id="pg-prev">Prev</button><span id="pg-l"></span><button class="btn" id="pg-next">Next</button></div></details>
+  </div>
+</section>
+
+<section data-view="ml" class="view" hidden>
+  <h1>ML Lab</h1>
+  <p class="muted">No fixed accuracy is promised; results depend on the generated data. ML uses 4-direction movement.</p>
+  <div class="grid cards2 top">
+    <article class="card"><h2>Regression: predict cost-to-goal</h2>
+      <p>Learn distance-to-goal from cheap features, then test it as an A* heuristic.</p>
+      <div class="form-grid"><label>n_mazes<input type="number" id="rg-n" value="150" min="10"></label><label>samples_per_maze<input type="number" id="rg-s" value="150" min="10"></label><label>test_size<input type="number" id="rg-t" value="0.2" step="0.05" min="0.1" max="0.5"></label><label>seed<input type="number" id="rg-seed" value="42"></label></div>
+      <button class="btn primary" id="rg-train" data-needs-backend>Train</button><p class="err" id="rg-err" role="alert"></p>
+      <div aria-live="polite"><progress id="rg-prog" hidden></progress> <span id="rg-pl"></span></div>
+      <div id="rg-out" class="empty"><p>Not trained yet.</p></div>
+      <h3>Demo on the current maze</h3>
+      <div class="row wrap"><label>Model <select id="rg-model"><option>linear</option><option>tree</option></select></label><button class="btn" id="rg-demo" data-needs-backend>Compare A* heuristics</button><label class="inline"><input type="checkbox" id="rg-heat"> Overlay learned heatmap</label></div>
+      <div id="rg-demo-out" class="scroll"></div><div class="canvas-wrap small"><canvas id="rg-canvas" role="img" aria-label="Maze with optional learned heuristic heatmap"></canvas></div>
+      <p class="warn"><i data-lucide="triangle-alert"></i> A learned heuristic can overestimate, so A* may lose optimality.</p>
+    </article>
+    <article class="card"><h2>Classification: best algorithm</h2>
+      <p>Predict which algorithm is best from maze features, compared with always guessing the majority class.</p>
+      <div class="form-grid"><label>n_mazes<input type="number" id="cl-n" value="400" min="20"></label><label>test_size<input type="number" id="cl-t" value="0.25" step="0.05" min="0.1" max="0.5"></label><label>seed<input type="number" id="cl-seed" value="42"></label>
+      <label>criterion<select id="cl-crit"><option>nodes_within_tolerance</option><option>runtime_within_tolerance</option></select></label><label>tolerance<input type="number" id="cl-tol" value="0.1" step="0.05" min="0"></label></div>
+      <button class="btn primary" id="cl-train" data-needs-backend>Train</button><p class="err" id="cl-err" role="alert"></p>
+      <div aria-live="polite"><progress id="cl-prog" hidden></progress> <span id="cl-pl"></span></div>
+      <div id="cl-out" class="empty"><p>Not trained yet.</p></div>
+      <h3>Demo on the current maze</h3>
+      <div class="row wrap"><label class="inline"><input type="checkbox" id="cl-actual"> Run actual race to verify</label><button class="btn" id="cl-demo" data-needs-backend>Predict</button></div>
+      <div id="cl-demo-out" class="scroll"></div>
+    </article>
+  </div>
+</section>
+
+<section data-view="about" class="view" hidden>
+  <h1>About PathFinder</h1>
+  <div class="card"><h2>Algorithms</h2><div id="about-algos"></div></div>
+  <div class="card"><h2>Heuristics</h2><div class="scroll" id="about-heur"></div></div>
+  <div class="card"><h2>Metrics</h2><ul><li><b>Nodes expanded</b>: nodes removed from the frontier and expanded.</li><li><b>Path length / cost</b>: moves, and summed entry costs (diagonals ×√2).</li><li><b>Peak frontier</b>: max distinct frontier cells.</li><li><b>Execution time</b>: benchmark only, <code>perf_counter_ns</code> around <code>run()</code>.</li><li><b>Optimality</b> = C* / C, where C* comes from an independent Dijkstra (1.0 is optimal; undefined if unsolvable).</li><li><b>Accuracy</b> appears only in the ML Lab.</li></ul></div>
+  <div class="card"><h2>Problem formulation and PEAS</h2><p><b>State</b>: a free cell. <b>Actions</b>: 4 or 8 moves, no corner cutting. <b>Cost</b>: entry cost of the cell (floor 1, sand 3, water 5). <b>Goal test</b>: cell = goal.</p><p><b>Performance</b>: cost, expansions. <b>Environment</b>: static grid. <b>Actuators</b>: moves. <b>Sensors</b>: full map.</p></div>
+  <div class="card"><h2>Syllabus mapping</h2><p>Uninformed search (BFS, DFS, UCS), informed search (Greedy, A*), heuristics and admissibility, evaluation of search, basic ML (regression, classification).</p></div>
+  <div class="card"><h2>Not implemented</h2><p>IDA*, bidirectional search, other maze generators, neural networks, multi-agent search.</p></div>
+  <div class="card"><h2>Keyboard shortcuts</h2><p><kbd>Space</kbd> start/pause · <kbd>S</kbd> step · <kbd>R</kbd> reset · <kbd>1</kbd>–<kbd>5</kbd> toggle algorithms (Visualizer, not while typing).</p></div>
+  <div class="card"><h2>Project</h2><p>College mini-project. Frontend: vanilla ES modules, Canvas, Chart.js, Lucide icons.</p></div>
+</section>
+</main>
+<footer class="foot"><span>PathFinder · College mini-project · <span id="ver">backend offline</span></span><span>HTML · CSS · JS · Canvas · Chart.js · Lucide</span><nav aria-label="Footer"><a href="#/visualizer">Visualizer</a> <a href="#/benchmark">Benchmark</a> <a href="#/ml">ML Lab</a> <a href="#/about">About</a></nav></footer>
+<div id="toasts" aria-live="polite"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
