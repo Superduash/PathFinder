@@ -7,7 +7,6 @@ const VisualizerPage = lazy(() => import("@/pages/Visualizer").then(m => ({ defa
 const BenchmarkPage = lazy(() => import("@/pages/Benchmark").then(m => ({ default: m.BenchmarkPage })));
 const MLLabPage = lazy(() => import("@/pages/MLLab").then(m => ({ default: m.MLLabPage })));
 const AboutPage = lazy(() => import("@/pages/About").then(m => ({ default: m.AboutPage })));
-const DevKitPage = lazy(() => import("@/pages/DevKit").then(m => ({ default: m.DevKitPage })));
 const NotFoundPage = lazy(() => import("@/pages/NotFound").then(m => ({ default: m.NotFoundPage })));
 
 export function AppRoutes() {
@@ -20,7 +19,6 @@ export function AppRoutes() {
           <Route path="/benchmark" element={<BenchmarkPage />} />
           <Route path="/lab" element={<MLLabPage />} />
           <Route path="/about" element={<AboutPage />} />
-          <Route path="/dev/kit" element={<DevKitPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

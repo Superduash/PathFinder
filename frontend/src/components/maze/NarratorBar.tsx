@@ -49,3 +49,4 @@ export const NarratorBar: React.FC<NarratorBarProps> = ({ stats, raceState }) =>
     </div>
   );
 };
+

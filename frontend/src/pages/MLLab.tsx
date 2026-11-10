@@ -11,13 +11,17 @@ import { useAppStore } from "@/store/useAppStore";
 import { useJob } from "@/hooks/useJob";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { request } from "@/lib/api";
 import { notify } from "@/lib/notify";
 
 export const MLLabPage: React.FC = () => {
   const { maze } = useAppStore();
 
-  // Status restored on load
+  const [activeTab, setActiveTab] = useState("regression");
   const [mlStatus, setMlStatus] = useState<any>(null);
 
   // Regression Job State
@@ -35,7 +39,7 @@ export const MLLabPage: React.FC = () => {
   const { status: regStatus, progress: regProgress, result: regJobResult } = useJob(regJobId);
   const { status: clsStatus, progress: clsProgress, result: clsJobResult } = useJob(clsJobId);
 
-  // Restore latest models on mount
+  // Load ML Status
   const loadStatus = async () => {
     try {
       const res = await request<any>("/api/ml/status");
@@ -74,7 +78,7 @@ export const MLLabPage: React.FC = () => {
         }),
       });
       setRegJobId(res.jobId);
-      notify.info("Regression training started");
+      notify.info("Regression training job started");
     } catch (err) {
       notify.error(err);
     }
@@ -111,7 +115,7 @@ export const MLLabPage: React.FC = () => {
         }),
       });
       setClsJobId(res.jobId);
-      notify.info("Classification training started");
+      notify.info("Classification training job started");
     } catch (err) {
       notify.error(err);
     }
@@ -129,238 +133,289 @@ export const MLLabPage: React.FC = () => {
         body: JSON.stringify({ maze, run_actual: true }),
       });
       setPredictResult(res);
-      notify.success("Winner predicted for current maze");
+      notify.success("Algorithm winner predicted for current maze");
     } catch (err) {
       notify.error(err);
     }
   };
 
   return (
-    <div className="flex-1 p-6 max-w-6xl mx-auto w-full flex flex-col gap-6 text-xs">
-      {/* Header banner */}
-      <div className="border-b border-border pb-4">
-        <h1 className="text-xl font-bold text-text">Machine Learning Laboratory</h1>
-        <p className="text-text-muted text-[11px] mt-0.5">
-          Train learned cost heuristics (regression) and optimal algorithm recommendation classifiers.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 1. REGRESSION CARD */}
-        <div className="p-4 bg-surface border border-border rounded-xl flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-border pb-3">
-            <div className="flex items-center gap-2">
-              <BrainCircuit className="w-4 h-4 text-accent" />
-              <span className="font-semibold text-text uppercase tracking-wider text-[11px]">
-                Heuristic Cost Regression
-              </span>
-            </div>
-            {mlStatus?.regression && (
-              <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-success text-[10px] border border-success/30">
-                Model Ready
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between text-text-muted">
-              <span>Training Mazes</span>
-              <span className="font-mono">{regMazes} mazes</span>
-            </div>
-            <Slider
-              value={[regMazes]}
-              min={30}
-              max={150}
-              step={10}
-              onValueChange={([val]) => setRegMazes(val)}
-            />
-          </div>
-
-          <button
-            onClick={handleTrainRegression}
-            disabled={regStatus === "running"}
-            className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-accent text-bg font-semibold hover:opacity-90 disabled:opacity-50"
-          >
-            <Sparkles className="w-3.5 h-3.5 fill-current" />
-            {regStatus === "running" ? "Training..." : "Train Regression Models"}
-          </button>
-
-          {regStatus === "running" && regProgress && (
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between font-mono text-[10px] text-text-muted">
-                <span>{regProgress.label}</span>
-                <span>{regProgress.done}/{regProgress.total}</span>
-              </div>
-              <Progress value={regProgress.total > 0 ? (regProgress.done / regProgress.total) * 100 : 0} />
-            </div>
-          )}
-
-          {/* Metrics Table */}
-          {regResult && (
-            <div className="flex flex-col gap-3 pt-2">
-              <span className="font-semibold text-[10px] text-text-muted uppercase">Model Evaluation</span>
-              <table className="w-full text-left font-mono border-collapse">
-                <thead>
-                  <tr className="border-b border-border text-text-muted text-[10px]">
-                    <th className="py-1.5 px-2">MODEL</th>
-                    <th className="py-1.5 px-2">MAE</th>
-                    <th className="py-1.5 px-2">R²</th>
-                    <th className="py-1.5 px-2">OVERESTIMATE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {regResult.metrics.map((m: any, idx: number) => (
-                    <tr key={idx} className="border-b border-border/40">
-                      <td className="py-1.5 px-2 font-medium">{m.model}</td>
-                      <td className="py-1.5 px-2 text-accent font-bold">{m.mae}</td>
-                      <td className="py-1.5 px-2">{m.r2}</td>
-                      <td className="py-1.5 px-2 text-warning">{m.overestimate_pct}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Demo button */}
-              <div className="p-3 bg-surface-2 border border-border rounded-lg flex flex-col gap-2">
-                <span className="font-semibold text-text">Compare A* on Current Maze</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleAstarCompare("tree")}
-                    className="py-1.5 px-3 rounded bg-surface border border-border text-text hover:bg-surface/80 text-[11px]"
-                  >
-                    Run Decision Tree Heuristic
-                  </button>
-                  <button
-                    onClick={() => handleAstarCompare("linear")}
-                    className="py-1.5 px-3 rounded bg-surface border border-border text-text hover:bg-surface/80 text-[11px]"
-                  >
-                    Run Linear Heuristic
-                  </button>
-                </div>
-
-                {astarCompareResult && (
-                  <div className="pt-2 font-mono text-[11px] grid grid-cols-2 gap-2">
-                    <div className="p-2 bg-surface rounded border border-border">
-                      <span className="text-text-muted block text-[10px]">STANDARD A* (MANHATTAN)</span>
-                      <div>Expanded: {astarCompareResult.standard_astar.expanded}</div>
-                      <div>Cost: {astarCompareResult.standard_astar.cost}</div>
-                    </div>
-                    <div className="p-2 bg-surface rounded border border-border">
-                      <span className="text-accent block text-[10px]">LEARNED HEURISTIC A*</span>
-                      <div>Expanded: {astarCompareResult.learned_astar.expanded}</div>
-                      <div>Cost: {astarCompareResult.learned_astar.cost}</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+    <div className="flex-1 p-6 md:p-10 max-w-6xl mx-auto w-full flex flex-col gap-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-border gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-text">Machine Learning Laboratory</h1>
+          <p className="text-muted text-sm mt-1">
+            Can a model learn to search better? Train learned distance heuristics and predictive classifiers.
+          </p>
         </div>
 
-        {/* 2. CLASSIFICATION CARD */}
-        <div className="p-4 bg-surface border border-border rounded-xl flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-border pb-3">
-            <div className="flex items-center gap-2">
-              <Binary className="w-4 h-4 text-accent" />
-              <span className="font-semibold text-text uppercase tracking-wider text-[11px]">
-                Algorithm Recommendation
-              </span>
-            </div>
-            {mlStatus?.classification && (
-              <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-success text-[10px] border border-success/30">
-                Classifier Ready
-              </span>
-            )}
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
+          <TabsList className="bg-surface-2 p-1 rounded-xl">
+            <TabsTrigger value="regression" className="gap-2">
+              <BrainCircuit className="w-3.5 h-3.5" /> 1. Learn a Hint
+            </TabsTrigger>
+            <TabsTrigger value="classification" className="gap-2">
+              <Binary className="w-3.5 h-3.5" /> 2. Pick Best Algorithm
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between text-text-muted">
-              <span>Training Mazes</span>
-              <span className="font-mono">{clsMazes} mazes</span>
-            </div>
-            <Slider
-              value={[clsMazes]}
-              min={30}
-              max={150}
-              step={10}
-              onValueChange={([val]) => setClsMazes(val)}
-            />
-          </div>
-
-          <button
-            onClick={handleTrainClassification}
-            disabled={clsStatus === "running"}
-            className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-accent text-bg font-semibold hover:opacity-90 disabled:opacity-50"
-          >
-            <Sparkles className="w-3.5 h-3.5 fill-current" />
-            {clsStatus === "running" ? "Training..." : "Train Recommendation Classifier"}
-          </button>
-
-          {clsStatus === "running" && clsProgress && (
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between font-mono text-[10px] text-text-muted">
-                <span>{clsProgress.label}</span>
-                <span>{clsProgress.done}/{clsProgress.total}</span>
-              </div>
-              <Progress value={clsProgress.total > 0 ? (clsProgress.done / clsProgress.total) * 100 : 0} />
-            </div>
-          )}
-
-          {/* Classification Metrics */}
-          {clsResult && (
-            <div className="flex flex-col gap-3 pt-2">
-              <div className="grid grid-cols-2 gap-2 font-mono">
-                <div className="p-2.5 bg-surface-2 border border-border rounded-lg">
-                  <span className="text-text-muted block text-[10px]">TREE ACCURACY</span>
-                  <span className="text-accent font-bold text-sm">{clsResult.metrics.accuracy * 100}%</span>
-                </div>
-                <div className="p-2.5 bg-surface-2 border border-border rounded-lg">
-                  <span className="text-text-muted block text-[10px]">MAJORITY BASELINE</span>
-                  <span className="text-text-muted font-bold text-sm">{clsResult.baseline_accuracy * 100}%</span>
-                </div>
-              </div>
-
-              {/* Predict for current maze */}
-              <div className="p-3 bg-surface-2 border border-border rounded-lg flex flex-col gap-2">
+      {/* 1. LEARN A HINT (REGRESSION) */}
+      {activeTab === "regression" && (
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Parameters & Train Card */}
+            <Card className="h-fit">
+              <CardHeader>
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-text">Predict Optimal Algorithm</span>
-                  <button
-                    onClick={handlePredict}
-                    className="flex items-center gap-1.5 py-1 px-2.5 rounded bg-surface border border-border text-accent font-semibold text-[11px] hover:bg-surface/80"
-                  >
-                    <Play className="w-3 h-3 fill-current" /> Predict
-                  </button>
+                  <CardTitle className="text-base">Train Heuristic Model</CardTitle>
+                  {mlStatus?.regression && <Chip variant="success">Trained</Chip>}
+                </div>
+                <CardDescription>
+                  Extracts topological features from random grids and trains regression estimators against ground truth Dijkstra distances.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-5">
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between text-xs text-muted">
+                    <span>Training Mazes</span>
+                    <span className="font-mono text-text font-bold">{regMazes}</span>
+                  </div>
+                  <Slider
+                    value={[regMazes]}
+                    min={30}
+                    max={150}
+                    step={10}
+                    onValueChange={([val]) => setRegMazes(val)}
+                  />
                 </div>
 
-                {predictResult && (
-                  <div className="pt-2 font-mono text-[11px] flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-text-muted">Predicted:</span>
-                      <span className="text-accent font-bold uppercase">{predictResult.predicted_algorithm}</span>
+                <Button
+                  onClick={handleTrainRegression}
+                  disabled={regStatus === "running"}
+                  className="gap-2 font-bold w-full"
+                >
+                  <Sparkles className="w-4 h-4 fill-current" />
+                  {regStatus === "running" ? "Training Models..." : "Train Heuristic Regressors"}
+                </Button>
+
+                {regStatus === "running" && regProgress && (
+                  <div className="flex flex-col gap-1.5 pt-2">
+                    <div className="flex justify-between font-mono text-[11px] text-muted">
+                      <span>{regProgress.label}</span>
+                      <span>{regProgress.done}/{regProgress.total}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-text-muted">Actual Race Winner:</span>
-                      <span className="text-text font-bold uppercase">{predictResult.actual_winner}</span>
+                    <Progress value={regProgress.total > 0 ? (regProgress.done / regProgress.total) * 100 : 0} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Evaluation Metrics Card */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Model Performance vs Manhattan Baseline</CardTitle>
+                <CardDescription>
+                  GroupShuffleSplit on unseen mazes. Overestimation can violate admissibility ($h(n) &gt; h^*(n)$).
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-6">
+                {regResult ? (
+                  <div className="flex flex-col gap-6">
+                    <div className="grid grid-cols-3 gap-3">
+                      {regResult.metrics.map((m: any, idx: number) => (
+                        <div key={idx} className="p-4 rounded-xl border border-border bg-surface-2 flex flex-col gap-1">
+                          <span className="text-xs text-muted block">{m.model}</span>
+                          <span className="text-xl font-bold text-text tabular-nums">{m.mae} MAE</span>
+                          <span className="text-[11px] text-warn tabular-nums mt-1 font-mono">
+                            {m.overestimate_pct}% overestimates
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-border">
-                      <span className="text-text-muted">Outcome:</span>
-                      {predictResult.is_correct ? (
-                        <span className="flex items-center gap-1 text-success font-bold">
-                          <CheckCircle className="w-3.5 h-3.5" /> Correct
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-danger font-bold">
-                          <XCircle className="w-3.5 h-3.5" /> Incorrect
-                        </span>
+
+                    {/* Compare on current maze */}
+                    <div className="p-4 rounded-xl border border-border bg-surface-2/60 flex flex-col gap-3">
+                      <span className="text-xs font-semibold uppercase text-muted tracking-wider">
+                        Live Heuristic Test on Current Maze
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleAstarCompare("tree")}
+                          className="font-medium text-xs"
+                        >
+                          Run A* with Decision Tree Heuristic
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleAstarCompare("linear")}
+                          className="font-medium text-xs"
+                        >
+                          Run A* with Linear Heuristic
+                        </Button>
+                      </div>
+
+                      {astarCompareResult && (
+                        <div className="grid grid-cols-2 gap-3 pt-2 text-xs font-mono">
+                          <div className="p-3 rounded-lg border border-border bg-surface">
+                            <span className="text-muted block text-[10px]">STANDARD A* (MANHATTAN)</span>
+                            <div className="text-sm font-bold text-text mt-1">
+                              Checked: {astarCompareResult.standard_astar.expanded}
+                            </div>
+                            <div className="text-text mt-0.5">Cost: {astarCompareResult.standard_astar.cost}</div>
+                          </div>
+                          <div className="p-3 rounded-lg border border-brand/40 bg-brand/10">
+                            <span className="text-brand block text-[10px]">LEARNED HEURISTIC A*</span>
+                            <div className="text-sm font-bold text-brand mt-1">
+                              Checked: {astarCompareResult.learned_astar.expanded}
+                            </div>
+                            <div className="text-text mt-0.5">Cost: {astarCompareResult.learned_astar.cost}</div>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
+                ) : (
+                  <div className="py-12 text-center text-muted text-sm">
+                    No models trained yet. Click "Train Heuristic Regressors" to generate training sets and fit models.
+                  </div>
                 )}
-              </div>
-            </div>
-          )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* 2. PICK THE BEST ALGORITHM (CLASSIFICATION) */}
+      {activeTab === "classification" && (
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="h-fit">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Train Classifier</CardTitle>
+                  {mlStatus?.classification && <Chip variant="success">Trained</Chip>}
+                </div>
+                <CardDescription>
+                  Trains a decision tree to classify which algorithm expands the fewest nodes on unseen mazes.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-5">
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between text-xs text-muted">
+                    <span>Training Mazes</span>
+                    <span className="font-mono text-text font-bold">{clsMazes}</span>
+                  </div>
+                  <Slider
+                    value={[clsMazes]}
+                    min={30}
+                    max={150}
+                    step={10}
+                    onValueChange={([val]) => setClsMazes(val)}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleTrainClassification}
+                  disabled={clsStatus === "running"}
+                  className="gap-2 font-bold w-full"
+                >
+                  <Sparkles className="w-4 h-4 fill-current" />
+                  {clsStatus === "running" ? "Training Classifier..." : "Train Recommendation Tree"}
+                </Button>
+
+                {clsStatus === "running" && clsProgress && (
+                  <div className="flex flex-col gap-1.5 pt-2">
+                    <div className="flex justify-between font-mono text-[11px] text-muted">
+                      <span>{clsProgress.label}</span>
+                      <span>{clsProgress.done}/{clsProgress.total}</span>
+                    </div>
+                    <Progress value={clsProgress.total > 0 ? (clsProgress.done / clsProgress.total) * 100 : 0} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Decision Tree Accuracy vs Majority Baseline</CardTitle>
+                <CardDescription>
+                  Evaluated on unseen validation mazes generated by independent seeds.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-6">
+                {clsResult ? (
+                  <div className="flex flex-col gap-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 rounded-xl border border-brand/40 bg-brand/10">
+                        <span className="text-xs text-muted block">Decision Tree Accuracy</span>
+                        <span className="text-2xl font-bold text-brand tabular-nums">
+                          {Math.round(clsResult.metrics.accuracy * 100)}%
+                        </span>
+                      </div>
+                      <div className="p-4 rounded-xl border border-border bg-surface-2">
+                        <span className="text-xs text-muted block">Majority Baseline (Zero-Intelligence)</span>
+                        <span className="text-2xl font-bold text-text tabular-nums">
+                          {Math.round(clsResult.baseline_accuracy * 100)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Predict on current visualizer maze */}
+                    <div className="p-4 rounded-xl border border-border bg-surface-2/60 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase text-muted tracking-wider">
+                          Predict Optimal Algorithm for Active Maze
+                        </span>
+                        <Button size="sm" onClick={handlePredict} className="gap-1.5 text-xs font-semibold">
+                          <Play className="w-3.5 h-3.5 fill-current" /> Predict &amp; Verify
+                        </Button>
+                      </div>
+
+                      {predictResult && (
+                        <div className="p-3 rounded-lg border border-border bg-surface flex items-center justify-between font-mono text-xs">
+                          <div>
+                            <span className="text-muted block text-[10px]">PREDICTED WINNER:</span>
+                            <span className="font-bold text-brand text-sm uppercase">
+                              {predictResult.predicted_algorithm}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-muted block text-[10px]">ACTUAL RACE WINNER:</span>
+                            <span className="font-bold text-text text-sm uppercase">
+                              {predictResult.actual_winner}
+                            </span>
+                          </div>
+                          <div>
+                            {predictResult.is_correct ? (
+                              <span className="flex items-center gap-1.5 text-success font-bold text-xs">
+                                <CheckCircle className="w-4 h-4" /> Correct Prediction
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1.5 text-danger font-bold text-xs">
+                                <XCircle className="w-4 h-4" /> Incorrect Prediction
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-muted text-sm">
+                    No classifier trained yet. Click "Train Recommendation Tree" to begin training.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

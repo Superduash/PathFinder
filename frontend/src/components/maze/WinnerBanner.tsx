@@ -54,3 +54,4 @@ export const WinnerBanner: React.FC<WinnerBannerProps> = ({
     </div>
   );
 };
+

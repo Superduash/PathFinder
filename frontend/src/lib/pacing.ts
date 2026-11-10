@@ -23,3 +23,4 @@ export function getPacing(level: number): PacingLevel {
   const clamped = Math.max(1, Math.min(10, Math.round(level)));
   return PACING_LEVELS[clamped - 1] || PACING_LEVELS[2];
 }
+
