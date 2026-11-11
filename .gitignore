@@ -15,8 +15,10 @@ ENV/
 env/
 
 # Data & Models
+data/
 backend/data/models/
 *.joblib
+*.db
 
 # Testing & Coverage
 .pytest_cache/
@@ -35,6 +37,7 @@ Desktop.ini
 *.md
 !README.md
 docs/*.md
+!docs/contract-notes.md
 
 # Code export
 code.txt

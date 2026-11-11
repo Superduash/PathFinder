@@ -210,7 +210,7 @@ class JobStatus(BaseModel):
     status: Literal["queued", "running", "done", "error", "cancelled"]
     progress: JobProgress = Field(default_factory=JobProgress)
     result: Optional[Any] = None
-    error: Optional[str] = None
+    error: Optional[Any] = None
 
 
 # ---------------------------------------------------------------------------
@@ -350,8 +350,10 @@ class MLStatus(BaseModel):
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
     version: str = "1.0.0"
-    algorithms: list[str] = []
+    python: str = ""
+    db: Literal["ok", "error"] = "ok"
     uptime_s: float = 0.0
+    algorithms: list[str] = ["bfs", "dfs", "ucs", "greedy", "astar"]
 
 
 # ---------------------------------------------------------------------------

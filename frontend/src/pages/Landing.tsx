@@ -152,11 +152,18 @@ export const LandingPage: React.FC = () => {
                 Start exploring <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
-            <a href="#how-it-works">
-              <Button variant="secondary" size="lg">
-                Watch how it works
-              </Button>
-            </a>
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => {
+                const el = document.getElementById("how-it-works");
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+            >
+              Watch how it works
+            </Button>
           </div>
         </div>
 

@@ -4,7 +4,7 @@ import threading
 import uuid
 from typing import Any, Callable, Optional
 from backend.app.models import JobStatus, JobProgress
-from backend.app.errors import ApiError, NOT_FOUND
+from backend.app.errors import ApiError, JobCancelled, NOT_FOUND
 
 
 class Job:
@@ -15,8 +15,9 @@ class Job:
         self.status = "queued"
         self.progress = JobProgress(done=0, total=0, label="")
         self.result: Optional[Any] = None
-        self.error: Optional[str] = None
+        self.error: Optional[dict[str, Any]] = None
         self.cancelled = False
+        self.cancel_requested = False
         self._thread: Optional[threading.Thread] = None
 
     def start(self) -> None:
@@ -24,22 +25,35 @@ class Job:
         self._thread.start()
 
     def _run(self) -> None:
+        if self.cancel_requested:
+            self.status = "cancelled"
+            self.cancelled = True
+            return
+
         self.status = "running"
         try:
             res = self.fn(self)
-            if self.cancelled:
+            if self.cancel_requested or self.cancelled:
                 self.status = "cancelled"
+                self.cancelled = True
             else:
                 self.result = res
                 self.status = "done"
+        except JobCancelled:
+            self.status = "cancelled"
+            self.cancelled = True
+        except ApiError as e:
+            self.error = {"code": e.code, "message": e.message, "details": e.details}
+            self.status = "error"
         except Exception as e:
-            self.error = str(e)
+            self.error = {"code": "INTERNAL", "message": str(e), "details": None}
             self.status = "error"
 
     def cancel(self) -> None:
-        self.cancelled = True
-        if self.status in ("queued", "running"):
+        self.cancel_requested = True
+        if self.status == "queued":
             self.status = "cancelled"
+            self.cancelled = True
 
     def set_progress(self, done: int, total: int, label: str = "") -> None:
         self.progress.done = done
@@ -79,7 +93,7 @@ class JobManager:
     def is_benchmark_running(self) -> bool:
         with self._lock:
             return any(
-                j.kind == "benchmark" and j.status == "running"
+                j.kind == "benchmark" and j.status in ("queued", "running")
                 for j in self.jobs.values()
             )
 

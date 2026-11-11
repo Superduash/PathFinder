@@ -15,6 +15,7 @@ from backend.app.errors import ApiError, BUSY
 
 class ParticipantSession:
     def __init__(self, spec: dict, maze: MazeGrid) -> None:
+        self.spec = spec
         self.algorithm: str = spec.get("algorithm", "bfs")
         self.heuristic: Optional[str] = spec.get("heuristic")
         self.search: BaseSearch = create_search(self.algorithm, maze, heuristic=self.heuristic)

@@ -16,7 +16,7 @@ from backend.app.maze.generators import generate, ensure_solvable
 from backend.app.maze.grid import MazeGrid
 from backend.app.search.algorithms import create_search
 from backend.app.search.reference import dijkstra_optimal_cost, compute_optimality
-from backend.app.errors import ApiError, CONFIG_TOO_LARGE
+from backend.app.errors import ApiError, JobCancelled, CONFIG_TOO_LARGE
 
 
 def run_benchmark_job(job, config: BenchmarkConfig) -> BenchmarkResult:
@@ -43,8 +43,8 @@ def run_benchmark_job(job, config: BenchmarkConfig) -> BenchmarkResult:
             for m_type in config.types:
                 config_idx += 1
                 for k in range(config.mazes_per_config):
-                    if job.cancelled:
-                        return None
+                    if getattr(job, "cancel_requested", False) or job.cancelled:
+                        raise JobCancelled("Benchmark was cancelled.")
 
                     seed = (config.base_seed * 1_000_003 + config_idx * 1_000 + k) % (2**31)
 

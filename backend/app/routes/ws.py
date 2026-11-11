@@ -83,6 +83,23 @@ async def websocket_race(websocket: WebSocket):
                     summary_msg = session.get_summary_message()
                     await websocket.send_text(summary_msg.model_dump_json())
 
+                    # Auto-record completed race to race_history
+                    try:
+                        from backend.app.db.base import session_scope
+                        from backend.app.db.repo import record_race_history
+                        with session_scope() as db_session:
+                            record_race_history(
+                                session=db_session,
+                                maze_data=session.maze.to_dict(),
+                                participants=[p.spec for p in session.participants],
+                                summary=summary_msg.model_dump(),
+                                reachable=(session.c_star is not None),
+                                optimal_cost=session.c_star,
+                            )
+                    except Exception as e:
+                        import logging
+                        logging.getLogger("pathfinder.ws").warning("Failed to record race history: %s", e)
+
             elif msg_type == "race.reset":
                 session = None
                 await websocket.send_json({"type": "race.reset_ok"})

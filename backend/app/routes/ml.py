@@ -20,12 +20,14 @@ router = APIRouter()
 
 
 @router.post("/ml/regression/train", response_model=JobStatus)
+@router.post("/ml/regression/jobs", response_model=JobStatus)
 def api_train_regression(config: RegressionConfig) -> JobStatus:
     job = job_manager.create("ml_regression", lambda j: train_regression(j, config))
     return job.to_model()
 
 
 @router.post("/ml/classification/train", response_model=JobStatus)
+@router.post("/ml/classification/jobs", response_model=JobStatus)
 def api_train_classification(config: ClassificationConfig) -> JobStatus:
     job = job_manager.create("ml_classification", lambda j: train_classification(j, config))
     return job.to_model()
