@@ -1,6 +1,6 @@
 """Metadata route returning algorithms, heuristics, generators, presets, glossary, and presets (backend.md Phase 7)."""
 from __future__ import annotations
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from backend.app.models import MetaResponse, AlgorithmMeta
 from backend.app.maze.presets import PRESETS
 from backend.app.maze.generators import GENERATORS
@@ -268,7 +268,8 @@ SPEED_LEVELS = [
 
 
 @router.get("/meta", response_model=MetaResponse)
-def get_meta() -> MetaResponse:
+def get_meta(response: Response) -> MetaResponse:
+    response.headers["Cache-Control"] = "public, max-age=300"
     return MetaResponse(
         algorithms=ALGORITHMS_INFO,
         heuristics=HEURISTICS_INFO,

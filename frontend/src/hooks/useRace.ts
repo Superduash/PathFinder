@@ -88,7 +88,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
       setWinnerReason(null);
       setInsights([]);
       setStepCount(0);
-      setRaceState("ready");
+      setRaceState(isRunningRef.current ? "running" : "ready");
     });
 
     socket.on("race.update", (msg: any) => {

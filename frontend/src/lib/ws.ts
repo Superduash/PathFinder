@@ -6,6 +6,7 @@ export class RaceSocket {
   private listeners: Map<string, Set<Listener>> = new Map();
   private pingInterval: any = null;
   private reconnectTimeout: any = null;
+  private isClosedManually = false;
 
   constructor(url?: string) {
     if (url) {
@@ -18,6 +19,7 @@ export class RaceSocket {
   }
 
   connect(): void {
+    this.isClosedManually = false;
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
@@ -48,6 +50,12 @@ export class RaceSocket {
     this.ws.onclose = () => {
       this.stopPing();
       this.emit("close", {});
+      if (!this.isClosedManually) {
+        if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = setTimeout(() => {
+          this.connect();
+        }, 1200);
+      }
     };
   }
 
@@ -85,6 +93,7 @@ export class RaceSocket {
   }
 
   disconnect(): void {
+    this.isClosedManually = true;
     this.stopPing();
     if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
     if (this.ws) {

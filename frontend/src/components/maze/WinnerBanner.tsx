@@ -1,12 +1,19 @@
 import React from "react";
-import { Trophy, ArrowRight, RotateCcw, Sparkles } from "lucide-react";
+import { Trophy, ArrowRight, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ParticipantStats } from "@/hooks/useRace";
+
+export interface InsightItem {
+  id?: string;
+  tone?: "good" | "warn" | "neutral" | string;
+  title?: string;
+  text?: string;
+}
 
 interface WinnerBannerProps {
   winner: ParticipantStats;
   winnerReason?: string | null;
-  insights?: string[];
+  insights?: (string | InsightItem)[];
   onRaceAgain: () => void;
   onNewMaze: () => void;
 }
@@ -43,15 +50,30 @@ export const WinnerBanner: React.FC<WinnerBannerProps> = ({
             )}
           </p>
           {insights.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {insights.map((ins, i) => (
-                <span
-                  key={i}
-                  className="inline-block px-2 py-0.5 rounded-md bg-surface-2 border border-border text-[11px] text-text font-medium"
-                >
-                  {ins}
-                </span>
-              ))}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {insights.map((ins, i) => {
+                const text =
+                  typeof ins === "string"
+                    ? ins
+                    : ins.text || ins.title || JSON.stringify(ins);
+                const tone = typeof ins === "object" ? ins.tone : "neutral";
+
+                let toneClasses = "bg-surface-2 border-border text-text";
+                if (tone === "good") {
+                  toneClasses = "bg-emerald-500/15 border-emerald-500/30 text-emerald-400";
+                } else if (tone === "warn") {
+                  toneClasses = "bg-amber-500/15 border-amber-500/30 text-amber-400";
+                }
+
+                return (
+                  <span
+                    key={i}
+                    className={`inline-block px-2.5 py-1 rounded-md border text-[11px] font-medium ${toneClasses}`}
+                  >
+                    {text}
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>
@@ -60,24 +82,25 @@ export const WinnerBanner: React.FC<WinnerBannerProps> = ({
       <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={onRaceAgain}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text text-xs font-semibold transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand text-brand-ink font-bold text-xs shadow-xs hover:brightness-110 transition-all"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>Race Again</span>
         </button>
+
         <button
           onClick={onNewMaze}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text text-xs font-semibold transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text font-semibold text-xs shadow-2xs transition-colors"
         >
-          <Sparkles className="w-3.5 h-3.5" />
           <span>New Maze</span>
         </button>
+
         <Link
           to="/benchmark"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-brand-ink text-xs font-bold hover:brightness-110 transition-all shadow-xs"
+          className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg text-brand text-xs font-semibold hover:underline"
         >
-          <span>Benchmark on 100 Mazes</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+          <span>Compare on 100 mazes</span>
+          <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
     </div>

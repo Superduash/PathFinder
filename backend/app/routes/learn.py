@@ -61,11 +61,18 @@ class LearnRunRequest(BaseModel):
     maze: Maze
 
 
+_WALKTHROUGH_CACHE: dict[tuple[str, str], dict] = {}
+
+
 @router.get("/learn/walkthrough")
 def get_walkthrough(
     algorithm: str = Query("bfs"),
     scenario: str = Query("tiny"),
 ) -> dict:
+    cache_key = (algorithm.lower(), scenario.lower())
+    if cache_key in _WALKTHROUGH_CACHE:
+        return _WALKTHROUGH_CACHE[cache_key]
+
     scen = SCENARIOS.get(scenario, SCENARIOS["tiny"])
     grid = MazeGrid(
         rows=scen["rows"],
@@ -121,13 +128,15 @@ def get_walkthrough(
             "note": note,
         })
 
-    return {
+    result = {
         "scenario": scenario,
         "algorithm": algorithm,
         "total_steps": len(frames),
         "found": search.status == "found",
         "frames": frames,
     }
+    _WALKTHROUGH_CACHE[cache_key] = result
+    return result
 
 
 @router.post("/learn/run")

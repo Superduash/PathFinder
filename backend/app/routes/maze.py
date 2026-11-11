@@ -35,10 +35,18 @@ def api_generate_maze(req: GenerateMazeRequest) -> Maze:
     return Maze(**grid.to_dict())
 
 
+_PRESET_CACHE: dict[tuple[str, bool], Maze] = {}
+
+
 @router.post("/maze/preset", response_model=Maze)
 def api_preset_maze(req: PresetMazeRequest) -> Maze:
+    key = (req.name, req.diagonal)
+    if key in _PRESET_CACHE:
+        return _PRESET_CACHE[key]
     grid = load_preset(req.name, diagonal=req.diagonal)
-    return Maze(**grid.to_dict())
+    res = Maze(**grid.to_dict())
+    _PRESET_CACHE[key] = res
+    return res
 
 
 @router.post("/maze/randomize-endpoints", response_model=Maze)

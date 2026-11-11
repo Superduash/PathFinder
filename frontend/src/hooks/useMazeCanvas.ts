@@ -44,6 +44,8 @@ export function useMazeCanvas({
   // Per-cell fade-in and recency tracking
   const birthMapRef = useRef<Map<string, number>>(new Map());
   const pathAnimProgressRef = useRef(0);
+  const staticCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const staticKeyRef = useRef<string>("");
 
   // Register births for newly checked cells
   useEffect(() => {
@@ -114,42 +116,59 @@ export function useMazeCanvas({
     const cellH = height / maze.rows;
     const now = performance.now();
 
-    // 1. Static Layer: Walls, Sand, Water, Floor
-    for (let r = 0; r < maze.rows; r++) {
-      for (let c = 0; c < maze.cols; c++) {
-        const code = maze.cells[r * maze.cols + c];
-        const x = c * cellW;
-        const y = r * cellH;
+    // 1. Static Layer: Walls, Sand, Water, Floor (Cached to Offscreen Canvas for maximum FPS)
+    const currentKey = `${maze.rows}x${maze.cols}_${Math.round(width)}x${Math.round(height)}_${dpr}_${isDark ? 1 : 0}_${maze.cells.length}_${maze.cells[0] || 0}`;
+    if (!staticCanvasRef.current || staticKeyRef.current !== currentKey) {
+      if (!staticCanvasRef.current) {
+        staticCanvasRef.current = document.createElement("canvas");
+      }
+      staticCanvasRef.current.width = width * dpr;
+      staticCanvasRef.current.height = height * dpr;
+      const sCtx = staticCanvasRef.current.getContext("2d");
+      if (sCtx) {
+        sCtx.scale(dpr, dpr);
+        for (let r = 0; r < maze.rows; r++) {
+          for (let c = 0; c < maze.cols; c++) {
+            const code = maze.cells[r * maze.cols + c];
+            const x = c * cellW;
+            const y = r * cellH;
 
-        if (code === 1) {
-          // Wall: rounded block with 2px inset
-          ctx.fillStyle = isDark ? "#232A3A" : "#CBD0DA";
-          const inset = Math.max(1, Math.min(cellW, cellH) * 0.08);
-          ctx.beginPath();
-          ctx.roundRect(x + inset, y + inset, cellW - inset * 2, cellH - inset * 2, 4);
-          ctx.fill();
-        } else if (code === 2) {
-          // Sand (slow, cost 3): warm stipple pattern
-          ctx.fillStyle = isDark ? "#282218" : "#F4EBD9";
-          ctx.fillRect(x, y, cellW, cellH);
-          ctx.fillStyle = isDark ? "#D97706" : "#B45309";
-          const dotR = Math.max(1, Math.min(cellW, cellH) * 0.12);
-          ctx.beginPath();
-          ctx.arc(x + cellW * 0.35, y + cellH * 0.35, dotR, 0, Math.PI * 2);
-          ctx.arc(x + cellW * 0.65, y + cellH * 0.65, dotR, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (code === 3) {
-          // Water (slower, cost 5): blue wave lines
-          ctx.fillStyle = isDark ? "#122538" : "#E0F2FE";
-          ctx.fillRect(x, y, cellW, cellH);
-          ctx.strokeStyle = isDark ? "#38BDF8" : "#0284C7";
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(x + cellW * 0.2, y + cellH * 0.5);
-          ctx.lineTo(x + cellW * 0.8, y + cellH * 0.5);
-          ctx.stroke();
+            if (code === 1) {
+              // Wall: rounded block with 2px inset
+              sCtx.fillStyle = isDark ? "#232A3A" : "#CBD0DA";
+              const inset = Math.max(1, Math.min(cellW, cellH) * 0.08);
+              sCtx.beginPath();
+              sCtx.roundRect(x + inset, y + inset, cellW - inset * 2, cellH - inset * 2, 4);
+              sCtx.fill();
+            } else if (code === 2) {
+              // Sand (slow, cost 3): warm stipple pattern
+              sCtx.fillStyle = isDark ? "#282218" : "#F4EBD9";
+              sCtx.fillRect(x, y, cellW, cellH);
+              sCtx.fillStyle = isDark ? "#D97706" : "#B45309";
+              const dotR = Math.max(1, Math.min(cellW, cellH) * 0.12);
+              sCtx.beginPath();
+              sCtx.arc(x + cellW * 0.35, y + cellH * 0.35, dotR, 0, Math.PI * 2);
+              sCtx.arc(x + cellW * 0.65, y + cellH * 0.65, dotR, 0, Math.PI * 2);
+              sCtx.fill();
+            } else if (code === 3) {
+              // Water (slower, cost 5): blue wave lines
+              sCtx.fillStyle = isDark ? "#122538" : "#E0F2FE";
+              sCtx.fillRect(x, y, cellW, cellH);
+              sCtx.strokeStyle = isDark ? "#38BDF8" : "#0284C7";
+              sCtx.lineWidth = 1.5;
+              sCtx.beginPath();
+              sCtx.moveTo(x + cellW * 0.2, y + cellH * 0.5);
+              sCtx.lineTo(x + cellW * 0.8, y + cellH * 0.5);
+              sCtx.stroke();
+            }
+          }
         }
       }
+      staticKeyRef.current = currentKey;
+    }
+
+    if (staticCanvasRef.current) {
+      ctx.drawImage(staticCanvasRef.current, 0, 0, width, height);
     }
 
     // 2. Heuristic Map Gradient Overlay (if active)
@@ -248,8 +267,8 @@ export function useMazeCanvas({
     // 7. Numbers on Cells Overlay (Order, g, h, f)
     if (overlayMode && overlayMode !== "off" && cellInfoMap && cellInfoMap.size > 0) {
       const minDimension = Math.min(cellW, cellH);
-      if (minDimension >= 16) {
-        ctx.font = `600 ${Math.max(9, Math.floor(minDimension * 0.36))}px "Inter Variable", sans-serif`;
+      if (minDimension >= 10) {
+        ctx.font = `600 ${Math.max(8, Math.floor(minDimension * 0.42))}px "Inter Variable", sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
