@@ -3,6 +3,7 @@ import confetti from "canvas-confetti";
 import { RaceSocket } from "@/lib/ws";
 import { getPacing } from "@/lib/pacing";
 import type { Maze, Participant } from "@/lib/types";
+import type { InsightItem } from "@/components/maze/WinnerBanner";
 
 export interface CellInfo {
   g: number;
@@ -37,7 +38,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
   const [stats, setStats] = useState<ParticipantStats[]>([]);
   const [winnerIdx, setWinnerIdx] = useState<number | null>(null);
   const [winnerReason, setWinnerReason] = useState<string | null>(null);
-  const [insights, setInsights] = useState<string[]>([]);
+  const [insights, setInsights] = useState<(string | InsightItem)[]>([]);
   const [serverNote, setServerNote] = useState<string | null>(null);
   const [countdown, _setCountdown] = useState<number | null>(null);
   const [stepCount, setStepCount] = useState<number>(0);

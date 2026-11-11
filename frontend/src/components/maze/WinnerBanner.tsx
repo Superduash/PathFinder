@@ -52,11 +52,27 @@ export const WinnerBanner: React.FC<WinnerBannerProps> = ({
           {insights.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {insights.map((ins, i) => {
-                const text =
-                  typeof ins === "string"
-                    ? ins
-                    : ins.text || ins.title || JSON.stringify(ins);
-                const tone = typeof ins === "object" ? ins.tone : "neutral";
+                let text = "";
+                let tone = "neutral";
+                
+                if (typeof ins === "string") {
+                  text = ins;
+                } else if (typeof ins === "object" && ins !== null) {
+                  // Extract text from object, prioritize text > title, fallback to stringifying
+                  text = ins.text || ins.title || "";
+                  if (!text) {
+                    // If both are empty, safely stringify the object
+                    try {
+                      text = JSON.stringify(ins);
+                    } catch {
+                      text = "[Insight]";
+                    }
+                  }
+                  tone = ins.tone || "neutral";
+                } else {
+                  // Fallback for any other type
+                  text = String(ins);
+                }
 
                 let toneClasses = "bg-surface-2 border-border text-text";
                 if (tone === "good") {

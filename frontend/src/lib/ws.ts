@@ -14,7 +14,16 @@ export class RaceSocket {
     } else {
       const loc = window.location;
       const proto = loc.protocol === "https:" ? "wss:" : "ws:";
-      this.url = `${proto}//${loc.host}/ws/race`;
+      // In development, use relative path which will be proxied by Vite to backend
+      // In production, connect directly to backend
+      if (import.meta.env.DEV) {
+        // Use the frontend's host, proxy will forward to backend
+        this.url = `${proto}//${loc.host}/ws/race`;
+      } else {
+        // In production, connect to backend on port 8000
+        const host = loc.hostname;
+        this.url = `${proto}//${host}:8000/ws/race`;
+      }
     }
   }
 
