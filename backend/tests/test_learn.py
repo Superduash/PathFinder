@@ -63,3 +63,4 @@ def test_learn_run_endpoint():
         assert body["same_as_engine"] is True
         assert body["cells_checked"] > 0
         assert body["status"] in ("found", "running", "failed")
+

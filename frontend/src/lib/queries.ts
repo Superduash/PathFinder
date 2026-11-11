@@ -118,3 +118,4 @@ export function useBenchmarkRunsQuery() {
     staleTime: 15 * 1000,
   });
 }
+

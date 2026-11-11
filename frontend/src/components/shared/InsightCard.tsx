@@ -33,3 +33,4 @@ export const InsightCard: React.FC<InsightCardProps> = ({
     </div>
   );
 };
+
