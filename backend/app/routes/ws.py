@@ -62,7 +62,14 @@ async def websocket_race(websocket: WebSocket):
                     grid.validate()
                     options = msg.get("options", {})
                     narrate = options.get("narrate", msg.get("narrate", True))
-                    session = RaceSession(race_id=race_id, maze=grid, participants=participants, narrate=narrate)
+                    show_values = bool(options.get("show_values", False))
+                    session = RaceSession(
+                        race_id=race_id,
+                        maze=grid,
+                        participants=participants,
+                        narrate=narrate,
+                        show_values=show_values,
+                    )
                     ready_msg = session.get_ready_message()
                     await websocket.send_text(ready_msg.model_dump_json())
                 except Exception as e:

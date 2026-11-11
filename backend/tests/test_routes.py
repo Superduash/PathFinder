@@ -17,7 +17,7 @@ def test_api_meta():
     res = client.get("/api/meta")
     assert res.status_code == 200
     data = res.json()
-    assert len(data["algorithms"]) == 5
+    assert len(data["algorithms"]) == 6
     assert any(h == "manhattan" or (isinstance(h, dict) and h.get("key") == "manhattan") for h in data["heuristics"])
     assert "backtracker" in data["generators"]
 

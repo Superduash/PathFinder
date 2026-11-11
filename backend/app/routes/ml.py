@@ -156,8 +156,9 @@ def api_astar_compare(payload: dict, db: Session = Depends(get_db)) -> dict:
     # Run A* with learned heuristic table
     class LearnedAStar(type(std_astar)):
         def __init__(self, m):
-            super().__init__(m, heuristic="zero")
+            super().__init__(m, kind="astar", heuristic="zero")
             self.h_fn = lambda r, c, gr, gc: h_table.get((r, c), 0.0)
+            self.waiting = [(self.score(self.start), next(self.tiebreak), self.start)]
 
     learned_search = LearnedAStar(grid)
     learned_search.run_to_completion()

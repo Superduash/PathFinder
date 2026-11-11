@@ -1,49 +1,17 @@
 import React, { useState, useEffect } from "react";
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  StepForward,
-  Dices,
-  Layers,
-  Flag,
-  Target,
-  Eraser,
-  Square,
-  Waves,
-} from "lucide-react";
-import { useAppStore, type ToolType } from "@/store/useAppStore";
+import { useAppStore } from "@/store/useAppStore";
 import { useRace } from "@/hooks/useRace";
 import { useMazeCanvas } from "@/hooks/useMazeCanvas";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { RacePanel } from "@/components/RacePanel";
-import { Legend } from "@/components/maze/Legend";
-import { NarratorBar } from "@/components/maze/NarratorBar";
-import { WinnerBanner } from "@/components/maze/WinnerBanner";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TilePalette } from "@/components/visualizer/TilePalette";
+import { RacersSidebar } from "@/components/visualizer/RacersSidebar";
+import { VisualizerToolbar } from "@/components/visualizer/VisualizerToolbar";
+import { ResultStrip } from "@/components/visualizer/ResultStrip";
+import { MazeSettingsModal, type MazeConfig } from "@/components/visualizer/MazeSettingsModal";
 import { request } from "@/lib/api";
 import { notify } from "@/lib/notify";
 import type { Maze } from "@/lib/types";
-
-const PRESET_CARDS = [
-  { id: "open_field", name: "Open Field", desc: "No obstacles. Compares pure exploration spread." },
-  { id: "wall_with_gap", name: "Wall with a Gap", desc: "Tests ability to navigate through narrow apertures." },
-  { id: "greedy_trap", name: "Greedy Trap", desc: "U-shaped trap that lures distance-heuristic searches." },
-  { id: "weighted_river", name: "River Crossing", desc: "Weighted water & sand terrain favoring UCS over BFS." },
-  { id: "corridor_maze", name: "Twisty Corridors", desc: "Narrow maze passages where DFS searches deep." },
-  { id: "unreachable_goal", name: "Impossible Goal", desc: "Walled-off goal testing exhaustive search limits." },
-];
-
-const AVAILABLE_RACERS = [
-  { id: "bfs", name: "BFS", desc: "Checks cells ring by ring", color: "var(--alg-bfs)", shape: "●" },
-  { id: "dfs", name: "DFS", desc: "Dives deep along single corridors", color: "var(--alg-dfs)", shape: "▲" },
-  { id: "ucs", name: "UCS (Dijkstra)", desc: "Always expands lowest cost route", color: "var(--alg-ucs)", shape: "■" },
-  { id: "greedy", name: "Greedy", desc: "Rushes directly towards goal", color: "var(--alg-greedy)", shape: "◆", hasHeuristic: true },
-  { id: "astar", name: "A*", desc: "Balances cost so far + distance hint", color: "var(--alg-astar)", shape: "★", hasHeuristic: true },
-];
 
 export const VisualizerPage: React.FC = () => {
   const {
@@ -58,53 +26,65 @@ export const VisualizerPage: React.FC = () => {
     updateCell,
   } = useAppStore();
 
-  const [activeTab, setActiveTab] = useState("maze");
-  const [rows, setRows] = useState(21);
-  const [cols, setCols] = useState(21);
-  const [genType, setGenType] = useState("backtracker");
-  const [density] = useState(0.25);
-  const [diagonal, setDiagonal] = useState(false);
-  const [weighted, setWeighted] = useState(false);
-  const [currentStepIndex, setCurrentStepIndex] = useState(1);
+  const [viewMode, setViewMode] = useState<"edit" | "race">("race");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  const [mazeConfig, setMazeConfig] = useState<MazeConfig>({
+    rows: 21,
+    cols: 21,
+    genType: "backtracker",
+    density: 0.25,
+    diagonal: false,
+    weighted: false,
+    weightFraction: 0.3,
+    seed: 42,
+  });
 
   const {
     raceState,
     stats,
     winnerIdx,
-    countdown,
-    pacing,
     startRace,
     pauseRace,
     stepRace,
     resetRace,
   } = useRace(maze, participants, speed);
 
-  // Generate Maze
-  const handleGenerate = async (seedOverride?: number, suppressToast: boolean = false) => {
+  // Generate maze from config
+  const handleGenerate = async (cfg: MazeConfig, suppressToast: boolean = false) => {
     try {
       const generated = await request<Maze>("/api/maze/generate", {
         method: "POST",
         body: JSON.stringify({
-          rows,
-          cols,
-          type: genType,
-          density,
-          diagonal,
-          weighted,
-          weight_fraction: 0.3,
-          seed: seedOverride !== undefined ? seedOverride : Math.floor(Math.random() * 100000),
+          rows: cfg.rows,
+          cols: cfg.cols,
+          type: cfg.genType,
+          density: cfg.density,
+          diagonal: cfg.diagonal,
+          weighted: cfg.weighted,
+          weight_fraction: cfg.weightFraction,
+          seed: cfg.seed,
           randomize_endpoints: true,
         }),
       });
       setMaze(generated);
       resetRace();
-      setCurrentStepIndex(2);
+      setActivePreset(null);
       if (!suppressToast) {
-        notify.success(`Maze ${rows}×${cols} generated (${genType})`);
+        notify.success(`Maze ${cfg.rows}×${cfg.cols} generated (${cfg.genType})`);
       }
     } catch (err) {
       notify.error(err);
     }
+  };
+
+  // 1-click re-roll with randomized seed
+  const handleNewMaze = () => {
+    const newSeed = Math.floor(Math.random() * 900000) + 100000;
+    const nextCfg = { ...mazeConfig, seed: newSeed };
+    setMazeConfig(nextCfg);
+    handleGenerate(nextCfg);
   };
 
   // Load Preset
@@ -112,13 +92,16 @@ export const VisualizerPage: React.FC = () => {
     try {
       const presetMaze = await request<Maze>("/api/maze/preset", {
         method: "POST",
-        body: JSON.stringify({ name: presetName, diagonal }),
+        body: JSON.stringify({ name: presetName, diagonal: mazeConfig.diagonal }),
       });
       setMaze(presetMaze);
-      setRows(presetMaze.rows);
-      setCols(presetMaze.cols);
+      setMazeConfig((prev) => ({
+        ...prev,
+        rows: presetMaze.rows,
+        cols: presetMaze.cols,
+      }));
       resetRace();
-      setCurrentStepIndex(2);
+      setActivePreset(presetName);
       notify.success(`Loaded preset '${presetName}'`);
     } catch (err) {
       notify.error(err);
@@ -127,11 +110,11 @@ export const VisualizerPage: React.FC = () => {
 
   useEffect(() => {
     if (!maze) {
-      handleGenerate(42, true);
+      handleGenerate(mazeConfig, true);
     }
   }, []);
 
-  // Canvas editor handler
+  // Cell drawing click handler for editor mode
   const handleCellClick = (r: number, c: number) => {
     if (raceState !== "idle" && raceState !== "ready") return;
     if (!maze) return;
@@ -150,9 +133,9 @@ export const VisualizerPage: React.FC = () => {
     }
   };
 
-  const { canvasRef, handlers } = useMazeCanvas({
+  const { canvasRef } = useMazeCanvas({
     maze,
-    interactive: raceState === "idle" || raceState === "ready",
+    interactive: viewMode === "edit" && (raceState === "idle" || raceState === "ready"),
     onCellClick: handleCellClick,
   });
 
@@ -163,13 +146,21 @@ export const VisualizerPage: React.FC = () => {
       handler: () => {
         if (raceState === "running") pauseRace();
         else {
-          setCurrentStepIndex(3);
+          setViewMode("race");
           startRace();
         }
       },
     },
     { key: "s", handler: () => stepRace() },
     { key: "r", handler: () => resetRace() },
+    {
+      key: "[",
+      handler: () => setSpeed(Math.max(1, speed - 1)),
+    },
+    {
+      key: "]",
+      handler: () => setSpeed(Math.min(10, speed + 1)),
+    },
   ]);
 
   const toggleParticipant = (algId: string) => {
@@ -181,325 +172,154 @@ export const VisualizerPage: React.FC = () => {
         notify.warning("At least one algorithm must be selected");
       }
     } else {
-      if (participants.length < 5) {
+      if (participants.length < 6) {
         setParticipants([
           ...participants,
-          { algorithm: algId, heuristic: algId === "greedy" || algId === "astar" ? "manhattan" : null },
+          {
+            algorithm: algId,
+            heuristic: algId === "greedy" || algId === "astar" ? "manhattan" : null,
+          },
         ]);
       } else {
-        notify.warning("Maximum 5 participants allowed");
+        notify.warning("Maximum 6 participants allowed");
       }
     }
   };
 
+  const handleUpdateHeuristic = (algId: string, heuristic: string) => {
+    setParticipants(
+      participants.map((p) =>
+        p.algorithm === algId ? { ...p, heuristic } : p
+      )
+    );
+  };
+
+  const handleStartRace = () => {
+    setViewMode("race");
+    startRace();
+  };
+
   const maxExpandedSeen = Math.max(1, ...stats.map((s) => s.expanded));
 
+  // Determine stage grid class based on participants count
+  const getGridColsClass = () => {
+    const count = participants.length;
+    if (count <= 1) return "grid-cols-1 max-w-lg mx-auto";
+    if (count === 2) return "grid-cols-1 sm:grid-cols-2";
+    if (count === 3) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+    if (count === 4) return "grid-cols-1 sm:grid-cols-2";
+    return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+  };
+
   return (
-    <div className="flex-1 flex flex-col max-w-[1600px] w-full mx-auto px-6 py-6 gap-6">
-      {/* 5.1 Step Indicator Header Strip */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text">Visualizer</h1>
-          <p className="text-muted text-xs mt-0.5">
-            Stepwise algorithm comparison with real-time expansion counters and continuous canvas editing.
-          </p>
-        </div>
+    <div className="flex-1 flex flex-col w-full max-w-[1700px] mx-auto px-4 py-3 gap-3">
+      {/* 1. Header Toolbar */}
+      <VisualizerToolbar
+        raceState={raceState}
+        onStart={handleStartRace}
+        onPause={pauseRace}
+        onStep={stepRace}
+        onReset={resetRace}
+        speed={speed}
+        onSpeedChange={setSpeed}
+        onSelectPreset={handleLoadPreset}
+        activePreset={activePreset}
+        onNewMaze={handleNewMaze}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        viewMode={viewMode}
+        onToggleViewMode={() =>
+          setViewMode((prev) => (prev === "edit" ? "race" : "edit"))
+        }
+      />
 
-        {/* Step indicator */}
-        <div className="flex items-center gap-2 text-xs font-semibold">
-          {[
-            { num: 1, label: "Build maze" },
-            { num: 2, label: "Choose racers" },
-            { num: 3, label: "Race" },
-          ].map((s) => (
-            <div
-              key={s.num}
-              onClick={() => {
-                if (s.num === 1) setActiveTab("maze");
-                if (s.num === 2) setActiveTab("racers");
-                if (s.num === 3) setActiveTab("race");
-                setCurrentStepIndex(s.num);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full cursor-pointer transition-all ${
-                currentStepIndex === s.num
-                  ? "bg-brand text-brand-ink shadow-sm"
-                  : currentStepIndex > s.num
-                  ? "bg-brand/15 text-brand border border-brand/30"
-                  : "bg-surface-2 text-muted border border-border"
-              }`}
-            >
-              <span>{s.num}</span>
-              <span>{s.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* 2. Middle Row: [Toolbox] | [Stage] | [Racers] */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-3 min-h-[460px] items-stretch">
+        {/* Left: Tile Palette & Legend (§3.5) */}
+        <TilePalette
+          selectedTool={selectedTool}
+          onSelectTool={(tool) => {
+            setSelectedTool(tool);
+            setViewMode("edit");
+          }}
+          disabled={raceState === "running"}
+        />
 
-      {/* Main Two-Column Layout */}
-      <div className="flex flex-col xl:flex-row gap-8 items-start">
-        {/* Left Control Panel (380px, sticky) */}
-        <aside className="w-full xl:w-[380px] shrink-0 sticky top-20 flex flex-col gap-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full grid grid-cols-3 h-11 bg-surface-2 p-1 rounded-xl">
-              <TabsTrigger value="maze">1. Maze</TabsTrigger>
-              <TabsTrigger value="racers">2. Racers</TabsTrigger>
-              <TabsTrigger value="race">3. Playback</TabsTrigger>
-            </TabsList>
-
-            {/* TAB 1: MAZE */}
-            <TabsContent value="maze" className="flex flex-col gap-4 mt-3">
-              {/* Presets Grid */}
-              <div className="p-4 rounded-2xl border border-border bg-surface flex flex-col gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Quick Presets
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  {PRESET_CARDS.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => handleLoadPreset(p.id)}
-                      className="p-2.5 rounded-xl border border-border bg-surface-2/60 hover:bg-surface-2 hover:border-brand/40 text-left transition-all"
-                    >
-                      <span className="font-semibold text-text text-xs block">{p.name}</span>
-                      <span className="text-[11px] text-muted line-clamp-1 mt-0.5">{p.desc}</span>
-                    </button>
-                  ))}
-                </div>
+        {/* Center: Stage Viewport (§3.4) */}
+        <main className="flex-1 flex flex-col bg-surface border border-border rounded-xl p-3 shadow-xs min-h-[420px] overflow-hidden">
+          {viewMode === "edit" ? (
+            /* Large Single Canvas Editor */
+            <div className="flex-1 flex flex-col items-center justify-center relative w-full h-full">
+              <div className="w-full max-w-[580px] aspect-square rounded-xl overflow-hidden border border-border shadow-xs bg-bg relative">
+                <canvas ref={canvasRef} className="w-full h-full block cursor-crosshair" />
               </div>
-
-              {/* Maze Generator Form */}
-              <div className="p-4 rounded-2xl border border-border bg-surface flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                    Generate Maze
-                  </span>
-                  <span className="font-mono text-xs text-brand">{rows} × {cols}</span>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs text-muted">Size: {rows} × {cols}</span>
-                  <Slider
-                    value={[rows]}
-                    min={11}
-                    max={45}
-                    step={2}
-                    onValueChange={([v]) => {
-                      setRows(v);
-                      setCols(v);
-                    }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: "backtracker", label: "Twisty Corridors" },
-                    { id: "braided", label: "Loops (Braided)" },
-                    { id: "random", label: "Random Walls" },
-                    { id: "weighted", label: "Terrain Blobs" },
-                  ].map((style) => (
-                    <button
-                      key={style.id}
-                      onClick={() => setGenType(style.id)}
-                      className={`p-2 rounded-lg border text-xs font-medium text-center transition-colors ${
-                        genType === style.id
-                          ? "bg-brand text-brand-ink border-brand font-semibold"
-                          : "bg-surface-2 border-border text-muted hover:text-text"
-                      }`}
-                    >
-                      {style.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs text-muted">Diagonal Movement</span>
-                  <Switch checked={diagonal} onCheckedChange={setDiagonal} />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted">Sand &amp; Water Terrain</span>
-                  <Switch checked={weighted} onCheckedChange={setWeighted} />
-                </div>
-
-                <Button onClick={() => handleGenerate()} className="w-full gap-2 mt-1">
-                  <Dices className="w-4 h-4" /> Generate New Maze
-                </Button>
+              <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-surface-2 border border-border text-[11px] text-muted font-medium select-none">
+                Click & drag to draw · Switch to Race View to compare
               </div>
-
-              {/* Painting Tools Toolbar */}
-              <div className="p-4 rounded-2xl border border-border bg-surface flex flex-col gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Draw Tools
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: "wall", label: "Wall", icon: Square },
-                    { id: "erase", label: "Erase", icon: Eraser },
-                    { id: "start", label: "Start", icon: Flag },
-                    { id: "goal", label: "Goal", icon: Target },
-                    { id: "sand", label: "Sand", icon: Layers },
-                    { id: "water", label: "Water", icon: Waves },
-                  ].map((t) => {
-                    const Icon = t.icon;
-                    const isSelected = selectedTool === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => setSelectedTool(t.id as ToolType)}
-                        className={`flex flex-col items-center justify-center p-2 rounded-xl border text-xs gap-1 transition-all ${
-                          isSelected
-                            ? "bg-brand/15 border-brand text-brand font-bold"
-                            : "bg-surface-2 border-border text-muted hover:text-text"
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span>{t.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* TAB 2: RACERS */}
-            <TabsContent value="racers" className="flex flex-col gap-3 mt-3">
-              <div className="p-4 rounded-2xl border border-border bg-surface flex flex-col gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Choose Racers ({participants.length}/5)
-                </span>
-
-                <div className="flex flex-col gap-2">
-                  {AVAILABLE_RACERS.map((racer) => {
-                    const selected = participants.some((p) => p.algorithm === racer.id);
-                    return (
-                      <div
-                        key={racer.id}
-                        className={`p-3.5 rounded-xl border flex items-center justify-between transition-colors ${
-                          selected
-                            ? "border-border bg-surface-2"
-                            : "border-border/40 bg-surface-2/30 opacity-60"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-lg" style={{ color: racer.color }}>
-                            {racer.shape}
-                          </span>
-                          <div>
-                            <span className="font-bold text-sm text-text block">{racer.name}</span>
-                            <span className="text-xs text-muted">{racer.desc}</span>
-                          </div>
-                        </div>
-                        <Switch checked={selected} onCheckedChange={() => toggleParticipant(racer.id)} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* TAB 3: PLAYBACK */}
-            <TabsContent value="race" className="flex flex-col gap-4 mt-3">
-              <div className="p-4 rounded-2xl border border-border bg-surface flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                    Speed Pacing
-                  </span>
-                  <span className="text-xs font-semibold text-brand">{pacing.description}</span>
-                </div>
-
-                <Slider
-                  value={[speed]}
-                  min={1}
-                  max={10}
-                  step={1}
-                  onValueChange={([val]) => setSpeed(val)}
-                />
-
-                <div className="grid grid-cols-4 gap-2 pt-2">
-                  {raceState === "running" ? (
-                    <Button variant="danger" onClick={pauseRace} className="col-span-2 gap-1.5">
-                      <Pause className="w-4 h-4 fill-current" /> Pause
-                    </Button>
-                  ) : (
-                    <Button onClick={startRace} className="col-span-2 gap-1.5 font-bold">
-                      <Play className="w-4 h-4 fill-current" />
-                      {raceState === "paused" ? "Resume" : "Start Race"}
-                    </Button>
-                  )}
-
-                  <Button variant="secondary" onClick={stepRace} title="Step 1 expansion">
-                    <StepForward className="w-4 h-4" />
-                  </Button>
-
-                  <Button variant="outline" onClick={resetRace} title="Reset race">
-                    <RotateCcw className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </aside>
-
-        {/* Right Stage (flex-1) */}
-        <section className="flex-1 w-full flex flex-col gap-6">
-          {/* Narrator Bar */}
-          <NarratorBar stats={stats} raceState={raceState} />
-
-          {/* Winner Banner on finish */}
-          {raceState === "finished" && winnerIdx !== null && stats[winnerIdx] && (
-            <WinnerBanner
-              winner={stats[winnerIdx]}
-              totalParticipants={stats.length}
-              onRaceAgain={startRace}
-              onNewMaze={() => handleGenerate()}
-            />
-          )}
-
-          {/* Canvas Viewport or Multi-Panel Grid */}
-          {raceState !== "idle" && stats.length > 0 ? (
-            <div
-              className={`grid gap-6 w-full ${
-                stats.length === 1
-                  ? "grid-cols-1 max-w-2xl mx-auto"
-                  : stats.length === 2
-                  ? "grid-cols-1 md:grid-cols-2"
-                  : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-              }`}
-            >
-              {stats.map((s, idx) => (
-                <RacePanel
-                  key={`${s.algorithm}_${idx}`}
-                  maze={maze!}
-                  stats={s}
-                  isWinner={winnerIdx === idx}
-                  maxExpandedSeen={maxExpandedSeen}
-                />
-              ))}
             </div>
           ) : (
-            <div className="w-full flex flex-col items-center">
-              <div className="relative w-full max-w-3xl aspect-square rounded-2xl border border-border bg-surface overflow-hidden shadow-xl">
-                <canvas
-                  ref={canvasRef}
-                  className="w-full h-full block cursor-crosshair touch-none select-none"
-                  {...handlers}
-                />
-                {/* 3-2-1 Countdown Overlay */}
-                {countdown !== null && (
-                  <div className="absolute inset-0 bg-bg/75 flex items-center justify-center z-30">
-                    <span className="text-7xl font-extrabold text-brand animate-ping">
-                      {countdown}
-                    </span>
+            /* Head-to-Head Multi-Racer Grid (1 to 6 Panels) */
+            <div
+              className={`flex-1 grid gap-3 w-full h-full content-center ${getGridColsClass()}`}
+            >
+              {participants.map((p, idx) => {
+                const s = stats[idx] || {
+                  algorithm: p.algorithm,
+                  heuristic: p.heuristic,
+                  status: "init",
+                  expanded: 0,
+                  frontier: 0,
+                  peakFrontier: 0,
+                  computeMs: 0,
+                  exploredSet: new Set<string>(),
+                  frontierSet: new Set<string>(),
+                };
+                return (
+                  <div key={p.algorithm} className="w-full flex justify-center">
+                    <div className="w-full max-w-[340px]">
+                      {maze && (
+                        <RacePanel
+                          maze={maze}
+                          stats={s}
+                          isWinner={winnerIdx === idx}
+                          maxExpandedSeen={maxExpandedSeen}
+                        />
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
+                );
+              })}
             </div>
           )}
+        </main>
 
-          {/* Maze Legend Always Visible */}
-          <Legend />
-        </section>
+        {/* Right: Racers Sidebar (§3.3) */}
+        <RacersSidebar
+          participants={participants}
+          onToggleParticipant={toggleParticipant}
+          onUpdateHeuristic={handleUpdateHeuristic}
+          diagonal={mazeConfig.diagonal}
+        />
       </div>
+
+      {/* 3. Bottom Row: Compact Results Strip (§5.2) */}
+      <ResultStrip
+        stats={stats}
+        winnerIdx={winnerIdx}
+        maxExpandedSeen={maxExpandedSeen}
+      />
+
+      {/* Settings Modal (§3.2) */}
+      <MazeSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        config={mazeConfig}
+        onApply={(newCfg) => {
+          setMazeConfig(newCfg);
+          handleGenerate(newCfg);
+        }}
+      />
     </div>
   );
 };
+
+export default VisualizerPage;

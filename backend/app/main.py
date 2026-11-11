@@ -21,7 +21,7 @@ from backend.app.errors import (
 )
 from backend.app.routes import (
     health, maze, solve, meta, benchmark, ws, jobs_api, ml,
-    library, history, settings as settings_route, runs
+    library, history, settings as settings_route, runs, learn
 )
 
 logging.basicConfig(
@@ -95,6 +95,7 @@ app.include_router(library.router, prefix="/api", tags=["library"])
 app.include_router(history.router, prefix="/api", tags=["history"])
 app.include_router(settings_route.router, prefix="/api", tags=["settings"])
 app.include_router(runs.router, prefix="/api", tags=["runs"])
+app.include_router(learn.router, prefix="/api", tags=["learn"])
 
 # WebSocket router
 app.include_router(ws.router, tags=["websocket"])

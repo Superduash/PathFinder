@@ -104,6 +104,11 @@ export interface HealthResponse {
   algorithms?: string[];
 }
 
+export interface HeuristicMapRequest {
+  maze: Maze;
+  heuristic?: string;
+}
+
 export interface JobProgress {
   done?: number;
   total?: number;
@@ -117,6 +122,11 @@ export interface JobStatus {
   progress?: JobProgress;
   result?: any | any;
   error?: any | any;
+}
+
+export interface LearnRunRequest {
+  snippet: string;
+  maze: Maze;
 }
 
 export interface Maze {

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import { ToastProvider } from "@/components/ui/toast";
+import { Toaster } from "sonner";
 import { AppRoutes } from "./routes";
 import "./styles/globals.css";
 
@@ -18,11 +18,10 @@ export function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <HashRouter>
-            <AppRoutes />
-          </HashRouter>
-        </ToastProvider>
+        <HashRouter>
+          <AppRoutes />
+        </HashRouter>
+        <Toaster richColors position="top-right" closeButton duration={3500} />
       </QueryClientProvider>
     </ThemeProvider>
   );

@@ -257,6 +257,9 @@ class ParticipantState(BaseModel):
     delta_discovered: Optional[list[list[int]]] = None  # newly discovered cells
     current: Optional[list[int]] = None                # last cell inspected this tick
     note: Optional[str] = None                         # narration note
+    info: Optional[list[list[Any]]] = None             # [idx, g, h, order, side?]
+    time: Optional[dict] = None                        # {compute_ms, ...}
+    steps: Optional[int] = None                        # tick step counter
 
 
 class RaceReadyMessage(BaseModel):
@@ -367,7 +370,7 @@ class HealthResponse(BaseModel):
     python: str = ""
     db: Literal["ok", "error"] = "ok"
     uptime_s: float = 0.0
-    algorithms: list[str] = ["bfs", "dfs", "ucs", "greedy", "astar"]
+    algorithms: list[str] = ["bfs", "dfs", "ucs", "greedy", "astar", "bds"]
 
 
 # ---------------------------------------------------------------------------

@@ -25,6 +25,6 @@ def get_health() -> HealthResponse:
         python=sys.version.split()[0],
         db=db_status,
         uptime_s=round(time.time() - START_TIME, 2),
-        algorithms=["bfs", "dfs", "ucs", "greedy", "astar"],
+        algorithms=["bfs", "dfs", "ucs", "greedy", "astar", "bds"],
     )
 

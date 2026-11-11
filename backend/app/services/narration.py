@@ -33,5 +33,8 @@ def narrate_step(
         f_val = g_val + h_val
         return f"A* picks ({r}, {c}): cost so far {g_val:.1f} + hint {h_val:.1f} = {f_val:.1f}, the lowest among waiting cells."
 
+    if algo in ("bds", "bidirectional"):
+        return f"Bidirectional Search checks ({r}, {c}), expanding toward the opposing search wave."
+
     return f"{algorithm.upper()} inspects cell ({r}, {c})."
 

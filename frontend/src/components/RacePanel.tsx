@@ -1,5 +1,7 @@
 import React from "react";
+import { useTheme } from "next-themes";
 import { useMazeCanvas } from "@/hooks/useMazeCanvas";
+import { getAlgorithmColor, ALGORITHM_VISUALS } from "@/lib/palette";
 import type { Maze } from "@/lib/types";
 import type { ParticipantStats } from "@/hooks/useRace";
 
@@ -10,28 +12,26 @@ interface RacePanelProps {
   maxExpandedSeen: number;
 }
 
-const ALG_DETAILS: Record<string, { color: string; shape: string }> = {
-  bfs: { color: "var(--alg-bfs)", shape: "●" },
-  dfs: { color: "var(--alg-dfs)", shape: "▲" },
-  ucs: { color: "var(--alg-ucs)", shape: "■" },
-  greedy: { color: "var(--alg-greedy)", shape: "◆" },
-  astar: { color: "var(--alg-astar)", shape: "★" },
-};
-
 export const RacePanel: React.FC<RacePanelProps> = ({
   maze,
   stats,
   isWinner,
   maxExpandedSeen,
 }) => {
-  const detail = ALG_DETAILS[stats.algorithm.toLowerCase()] || {
-    color: "var(--brand)",
-    shape: "●",
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== "light";
+
+  const algKey = stats.algorithm.toLowerCase();
+  const visual = ALGORITHM_VISUALS[algKey] || {
+    short: stats.algorithm.toUpperCase(),
+    fullName: stats.algorithm,
+    shape: "circle",
   };
+  const color = getAlgorithmColor(algKey, isDark);
 
   const { canvasRef } = useMazeCanvas({
     maze,
-    algorithmColor: detail.color,
+    algorithmColor: color,
     exploredSet: stats.exploredSet,
     frontierSet: stats.frontierSet,
     currentNode: stats.currentNode,
@@ -43,42 +43,43 @@ export const RacePanel: React.FC<RacePanelProps> = ({
 
   return (
     <div
-      className={`flex flex-col rounded-2xl border bg-surface overflow-hidden transition-all duration-300 ${
+      className={`flex flex-col rounded-xl border bg-surface overflow-hidden transition-all duration-200 shadow-sm ${
         isWinner
-          ? "border-brand shadow-lg shadow-brand/10 ring-1 ring-brand/50"
+          ? "border-brand ring-2 ring-brand/40 shadow-md"
           : "border-border hover:border-border/80"
       }`}
     >
-      {/* Header Bar */}
-      <div className="px-4 py-3 border-b border-border bg-surface-2/60 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-base" style={{ color: detail.color }}>
-            {detail.shape}
-          </span>
-          <span className="font-bold text-sm tracking-tight text-text">
-            {stats.algorithm.toUpperCase()}
+      {/* Header Bar - compact 28px */}
+      <div className="h-7 px-3 border-b border-border bg-surface-2 flex items-center justify-between text-xs select-none">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+            style={{ backgroundColor: color }}
+          />
+          <span className="font-bold text-text truncate">
+            {visual.short}
           </span>
           {stats.heuristic && (
-            <span className="text-xs text-muted font-normal">({stats.heuristic})</span>
+            <span className="text-muted text-[11px] truncate">({stats.heuristic})</span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           {isWinner && (
-            <span className="px-2 py-0.5 rounded-full bg-brand/20 text-brand text-[11px] font-bold">
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-brand text-brand-ink uppercase tracking-wide">
               WINNER
             </span>
           )}
           <span
-            className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${
+            className={`px-1.5 py-0.2 rounded text-[11px] font-medium ${
               stats.status === "found"
                 ? "bg-success/15 text-success"
                 : stats.status === "failed"
                 ? "bg-danger/15 text-danger"
-                : "bg-surface-2 text-muted"
+                : "text-muted"
             }`}
           >
-            {stats.status === "found" ? "Route Found" : stats.status === "running" ? "Searching..." : stats.status}
+            {stats.status === "found" ? "Route found" : stats.status === "running" ? "Searching…" : stats.status}
           </span>
         </div>
       </div>
@@ -88,51 +89,15 @@ export const RacePanel: React.FC<RacePanelProps> = ({
         <canvas ref={canvasRef} className="w-full h-full block" />
       </div>
 
-      {/* Relative Workload Bar */}
+      {/* Effort progress indicator */}
       <div className="w-full h-1 bg-surface-2">
         <div
-          className="h-full transition-all duration-300"
+          className="h-full transition-all duration-200"
           style={{
-            width: `${Math.min(100, Math.max(5, relativeEffort))}%`,
-            backgroundColor: detail.color,
+            width: `${Math.min(100, Math.max(3, relativeEffort))}%`,
+            backgroundColor: color,
           }}
         />
-      </div>
-
-      {/* 2x3 Metric Stat Block */}
-      <div className="p-4 bg-surface grid grid-cols-3 gap-3 border-t border-border text-left">
-        <div>
-          <span className="text-[11px] text-muted block mb-0.5">Cells Checked</span>
-          <span className="text-base font-bold text-text tabular-nums">{stats.expanded}</span>
-        </div>
-        <div>
-          <span className="text-[11px] text-muted block mb-0.5">Waiting Now</span>
-          <span className="text-base font-bold text-text tabular-nums">{stats.frontier}</span>
-        </div>
-        <div>
-          <span className="text-[11px] text-muted block mb-0.5">Peak Waiting</span>
-          <span className="text-base font-bold text-text tabular-nums">{stats.peakFrontier}</span>
-        </div>
-        <div>
-          <span className="text-[11px] text-muted block mb-0.5">Route Length</span>
-          <span className="text-sm font-semibold text-text tabular-nums">
-            {stats.pathLength !== null && stats.pathLength !== undefined ? stats.pathLength : "—"}
-          </span>
-        </div>
-        <div>
-          <span className="text-[11px] text-muted block mb-0.5">Route Cost</span>
-          <span className="text-sm font-semibold text-text tabular-nums">
-            {stats.pathCost !== null && stats.pathCost !== undefined ? stats.pathCost : "—"}
-          </span>
-        </div>
-        <div>
-          <span className="text-[11px] text-muted block mb-0.5">Quality vs Best</span>
-          <span className="text-sm font-bold text-brand tabular-nums">
-            {stats.optimality !== null && stats.optimality !== undefined
-              ? `${Math.round(stats.optimality * 100)}%`
-              : "—"}
-          </span>
-        </div>
       </div>
     </div>
   );

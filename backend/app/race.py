@@ -35,7 +35,7 @@ class ParticipantSession:
 
         return self.search.status in ("found", "failed")
 
-    def to_state(self, c_star: Optional[float], is_update: bool = True, narrate: bool = False) -> ParticipantState:
+    def to_state(self, c_star: Optional[float], is_update: bool = True, narrate: bool = False, show_values: bool = False, steps: int = 0) -> ParticipantState:
         s = self.search
         opt = compute_optimality(c_star, s.path_cost) if s.path_cost is not None else None
         path_list = [list(pt) for pt in s.path] if s.path else None
@@ -48,10 +48,28 @@ class ParticipantSession:
         if narrate and is_update and self.last_cell and s.status in ("init", "running"):
             g_cost = s.g_costs.get(self.last_cell, 0.0) if hasattr(s, "g_costs") else None
             h_cost = 0.0
-            if hasattr(s, "h_fn"):
+            if hasattr(s, "h_fn") and s.h_fn:
                 gr, gc = s.maze.goal
                 h_cost = s.h_fn(self.last_cell[0], self.last_cell[1], gr, gc)
             note = narrate_step(self.algorithm, self.heuristic, self.last_cell, g_cost, h_cost)
+
+        info = None
+        if show_values and is_update:
+            info = []
+            cols = s.maze.cols
+            reported = set(s.delta_expanded + s.delta_discovered)
+            for cell in reported:
+                idx = cell[0] * cols + cell[1]
+                g_val = s.g_costs.get(cell, 0.0) if hasattr(s, "g_costs") else 0.0
+                h_val = None
+                if hasattr(s, "h_fn") and s.h_fn:
+                    gr, gc = s.maze.goal
+                    h_val = round(s.h_fn(cell[0], cell[1], gr, gc), 1)
+                order_val = len(s.trace)
+                side_val = getattr(s, "cell_sides", {}).get(cell)
+                info.append([idx, g_val, h_val, order_val, side_val])
+
+        compute_ms = round(self.accumulated_compute_s * 1000, 3)
 
         return ParticipantState(
             algorithm=self.algorithm,
@@ -65,16 +83,19 @@ class ParticipantSession:
             path_length=s.path_length,
             path_cost=s.path_cost,
             optimality=opt,
-            compute_ms=round(self.accumulated_compute_s * 1000, 3),
+            compute_ms=compute_ms,
             delta_expanded=delta_exp,
             delta_discovered=delta_disc,
             current=curr,
             note=note,
+            info=info,
+            time={"compute_ms": compute_ms},
+            steps=steps,
         )
 
 
 class RaceSession:
-    def __init__(self, race_id: str, maze: MazeGrid, participants: list[dict], narrate: bool = True) -> None:
+    def __init__(self, race_id: str, maze: MazeGrid, participants: list[dict], narrate: bool = True, show_values: bool = False) -> None:
         self.race_id = race_id
         self.maze = maze
         self.c_star = dijkstra_optimal_cost(maze)
@@ -82,12 +103,13 @@ class RaceSession:
             ParticipantSession(p, maze) for p in participants
         ]
         self.narrate = narrate
+        self.show_values = show_values
         self.tick = 0
         self.finished = False
         self.start_time = time.time()
 
     def get_ready_message(self) -> RaceReadyMessage:
-        states = [p.to_state(self.c_star, is_update=False, narrate=False) for p in self.participants]
+        states = [p.to_state(self.c_star, is_update=False, narrate=False, show_values=False, steps=0) for p in self.participants]
         initial_cells = [list(self.maze.start), list(self.maze.goal)]
 
         racers_meta = []
@@ -127,7 +149,7 @@ class RaceSession:
                 all_done = False
 
         self.finished = all_done
-        states = [p.to_state(self.c_star, is_update=True, narrate=self.narrate) for p in self.participants]
+        states = [p.to_state(self.c_star, is_update=True, narrate=self.narrate, show_values=self.show_values, steps=self.tick) for p in self.participants]
         elapsed_ms = round((time.time() - self.start_time) * 1000, 1)
 
         return RaceUpdateMessage(

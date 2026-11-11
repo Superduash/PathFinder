@@ -5,11 +5,18 @@ from backend.app.models import (
     Maze, GenerateMazeRequest, PresetMazeRequest,
     RandomizeEndpointsRequest, ValidateMazeRequest
 )
+from pydantic import BaseModel
 from backend.app.maze.grid import MazeGrid
 from backend.app.maze.generators import generate, randomize_endpoints as rand_ep
 from backend.app.maze.presets import load_preset
+from backend.app.search.heuristics import get_heuristic
 
 router = APIRouter()
+
+
+class HeuristicMapRequest(BaseModel):
+    maze: Maze
+    heuristic: str = "manhattan"
 
 
 @router.post("/maze/generate", response_model=Maze)
@@ -50,4 +57,27 @@ def api_validate_maze(req: ValidateMazeRequest) -> dict:
     from backend.app.search.reference import is_reachable
     solvable = is_reachable(grid)
     return {"valid": True, "solvable": solvable}
+
+
+@router.post("/maze/heuristic-map")
+def api_heuristic_map(req: HeuristicMapRequest) -> dict:
+    grid = MazeGrid.from_model(req.maze)
+    h_fn = get_heuristic(req.heuristic, grid.diagonal)
+    gr, gc = grid.goal
+    values = []
+    max_h = 0.0
+    for r in range(grid.rows):
+        for c in range(grid.cols):
+            if grid.cell(r, c) == 1:
+                values.append(None)
+            else:
+                h = h_fn(r, c, gr, gc)
+                values.append(round(h, 2))
+                if h > max_h:
+                    max_h = h
+    return {
+        "values": values,
+        "max": round(max_h, 2),
+        "heuristic": req.heuristic,
+    }
 

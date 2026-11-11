@@ -12,3 +12,4 @@ npm run dev
 
 Stop-Job $backendJob
 Remove-Job $backendJob
+

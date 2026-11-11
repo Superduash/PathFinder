@@ -10,3 +10,4 @@ trap "kill $BACKEND_PID" EXIT
 
 cd frontend
 npm run dev
+

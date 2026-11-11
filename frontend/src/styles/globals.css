@@ -1,9 +1,36 @@
-@import "./tokens.css";
+@import "tailwindcss";
+@import "@heroui/styles";
 @import "@fontsource-variable/inter";
+@import "./tokens.css";
+@plugin "@tailwindcss/typography";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+
+  --color-alg-bfs: var(--alg-bfs);
+  --color-alg-dfs: var(--alg-dfs);
+  --color-alg-ucs: var(--alg-ucs);
+  --color-alg-greedy: var(--alg-greedy);
+  --color-alg-astar: var(--alg-astar);
+  --color-alg-bds: var(--alg-bds);
+
+  --color-alg-bfs-soft: var(--alg-bfs-soft);
+  --color-alg-dfs-soft: var(--alg-dfs-soft);
+  --color-alg-ucs-soft: var(--alg-ucs-soft);
+  --color-alg-greedy-soft: var(--alg-greedy-soft);
+  --color-alg-astar-soft: var(--alg-astar-soft);
+  --color-alg-bds-soft: var(--alg-bds-soft);
+}
 
 @layer base {
   body {
@@ -17,7 +44,6 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Dotted background pattern for marketing hero */
   .bg-dot-pattern {
     background-image: radial-gradient(rgba(45, 212, 191, 0.15) 1px, transparent 1px);
     background-size: 24px 24px;
@@ -28,7 +54,6 @@
   font-feature-settings: "tnum";
 }
 
-/* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

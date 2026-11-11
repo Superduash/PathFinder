@@ -110,3 +110,37 @@ def compute_optimality(c_star: Optional[float], path_cost: Optional[float]) -> O
     ratio = c_star / path_cost
     return round(min(1.0, ratio), 4)
 
+
+def reverse_dijkstra(maze: MazeGrid) -> dict[tuple[int, int], float]:
+    """Compute true shortest-path cost from every reachable cell to maze.goal."""
+    goal = maze.goal
+    pq: list[tuple[float, int, tuple[int, int]]] = [(0.0, 0, goal)]
+    dist: dict[tuple[int, int], float] = {goal: 0.0}
+    visited: set[tuple[int, int]] = set()
+    counter = 0
+
+    while pq:
+        d, _, v = heapq.heappop(pq)
+        if v in visited:
+            continue
+        visited.add(v)
+
+        # For every cell u that can step into v:
+        # Since adjacency is symmetric, u is in maze.neighbours(*v).
+        # When moving forward u -> v, the step cost is the forward edge cost into v.
+        for ur, uc, _ in maze.neighbours(*v):
+            u = (ur, uc)
+            if u in visited:
+                continue
+            # Calculate forward cost from u to v
+            is_diag = (u[0] != v[0]) and (u[1] != v[1])
+            edge_cost = math.sqrt(2) * maze.cost_of(*v) if is_diag else float(maze.cost_of(*v))
+            new_d = d + edge_cost
+            if u not in dist or new_d < dist[u]:
+                dist[u] = new_d
+                counter += 1
+                heapq.heappush(pq, (new_d, counter, u))
+
+    return dist
+
+

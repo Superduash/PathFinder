@@ -229,7 +229,7 @@ def test_meta_route_enrichments():
 
     # Algorithms
     algos = meta["algorithms"]
-    assert len(algos) == 5
+    assert len(algos) == 6
     assert "plain" in algos[0]
     assert "shape" in algos[0]
     assert "color_key" in algos[0]
