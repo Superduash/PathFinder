@@ -70,6 +70,15 @@ const ALGORITHM_CARDS = [
     description: "Balances path cost with distance estimates. Optimal efficiency with admissible heuristics.",
     chips: ["Shortest Path Guaranteed", "Uses Distance Hint", "Smart & Optimal"],
   },
+  {
+    id: "bds",
+    name: "BDS",
+    fullName: "Bidirectional Search",
+    shape: "⬡",
+    color: "var(--alg-bds)",
+    description: "Searches from both start and goal simultaneously. Two waves meet in the middle.",
+    chips: ["Fewest Moves", "No Heuristic", "Half the Depth"],
+  },
 ];
 
 export const LandingPage: React.FC = () => {

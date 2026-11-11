@@ -135,3 +135,4 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
     </div>
   );
 };
+

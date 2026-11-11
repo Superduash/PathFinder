@@ -72,10 +72,6 @@ class Search:
         self.delta_expanded: list[tuple[int, int]] = []
         self.delta_discovered: list[tuple[int, int]] = []
 
-    @property
-    def expanded(self) -> int:
-        return self.expanded_count
-
     def score(self, cell: tuple[int, int]) -> float:
         g = self.g_costs.get(cell, 0.0)
         h = self.h_fn(cell[0], cell[1], self.goal[0], self.goal[1]) if self.h_fn else 0.0
@@ -180,7 +176,12 @@ class Search:
 
         return False
 
-    def run_to_completion(self, max_expansions: Optional[int] = None) -> Search:
+    @property
+    def expanded(self) -> int:
+        """Total number of nodes expanded (popped from frontier)."""
+        return self.expanded_count
+
+    def run_to_completion(self, max_expansions: Optional[int] = None) -> "Search":
         while self.status in ("init", "running"):
             if max_expansions and self.expanded_count >= max_expansions:
                 self.status = "failed"
@@ -200,3 +201,4 @@ class Search:
         moves, cost = route_stats(self.maze, path)
         self.path_length = moves
         self.path_cost = cost
+

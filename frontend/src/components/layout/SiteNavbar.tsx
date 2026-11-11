@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { Route as RouteIcon, Sun, Moon, ArrowRight, Menu, X } from "lucide-react";
+import { Route as RouteIcon, Sun, Moon, ArrowRight, Menu, X, HelpCircle } from "lucide-react";
 import { motion } from "motion/react";
-import { Button } from "@/components/ui/button";
+import { startVisualizerTour } from "@/lib/tour";
 
 const NAV_ITEMS = [
   { path: "/visualizer", label: "Visualizer" },
   { path: "/benchmark", label: "Benchmark" },
   { path: "/lab", label: "ML Lab" },
-  { path: "/about", label: "About" },
+  { path: "/learn", label: "Learn" },
 ];
 
 export const SiteNavbar: React.FC = () => {
@@ -74,6 +74,18 @@ export const SiteNavbar: React.FC = () => {
 
         {/* Right side actions */}
         <div className="flex items-center gap-3">
+          {/* Tour button on Visualizer */}
+          {isVisualizer && (
+            <button
+              onClick={() => startVisualizerTour()}
+              title="Interactive Feature Tour"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs text-muted hover:text-text hover:bg-surface-2 transition-colors"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-brand" />
+              <span className="hidden sm:inline">Tour</span>
+            </button>
+          )}
+
           {/* Theme toggle */}
           {mounted && (
             <button
@@ -87,10 +99,11 @@ export const SiteNavbar: React.FC = () => {
 
           {/* Quick launch visualizer button */}
           {!isVisualizer && (
-            <Link to="/visualizer" className="hidden sm:inline-flex">
-              <Button size="sm" className="gap-1.5 text-xs font-semibold">
-                Try it <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-              </Button>
+            <Link
+              to="/visualizer"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand text-brand-ink text-xs font-bold shadow-xs hover:brightness-110 transition-all"
+            >
+              Try it <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           )}
 
@@ -118,8 +131,12 @@ export const SiteNavbar: React.FC = () => {
               {item.label}
             </Link>
           ))}
-          <Link to="/visualizer" onClick={() => setMobileMenuOpen(false)} className="mt-2">
-            <Button className="w-full justify-center">Launch Visualizer</Button>
+          <Link
+            to="/visualizer"
+            onClick={() => setMobileMenuOpen(false)}
+            className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-brand text-brand-ink text-sm font-bold"
+          >
+            Launch Visualizer
           </Link>
         </div>
       )}

@@ -19,6 +19,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Chip } from "@/components/ui/chip";
 import { request } from "@/lib/api";
 import { notify } from "@/lib/notify";
+import { RacerPicker } from "@/components/shared/RacerPicker";
+import { useBenchmarkRunsQuery } from "@/lib/queries";
 import type { CompareResult, BenchmarkConfig } from "@/lib/types";
 
 const PRESET_BENCHMARKS = [
@@ -28,8 +30,9 @@ const PRESET_BENCHMARKS = [
 ];
 
 export const BenchmarkPage: React.FC = () => {
-  const { maze, participants } = useAppStore();
-  const [activeTab, setActiveTab] = useState<"current" | "wizard">("wizard");
+  const { maze, participants, setParticipants } = useAppStore();
+  const [activeTab, setActiveTab] = useState<"current" | "wizard" | "runs">("wizard");
+  const { data: pastRunsData, isLoading: isLoadingRuns } = useBenchmarkRunsQuery();
 
   // Single compare state
   const [repeats, setRepeats] = useState(5);
@@ -139,6 +142,16 @@ export const BenchmarkPage: React.FC = () => {
           >
             Current Maze Comparison
           </button>
+          <button
+            onClick={() => setActiveTab("runs")}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === "runs"
+                ? "bg-brand text-brand-ink shadow-sm"
+                : "text-muted hover:text-text"
+            }`}
+          >
+            Past Runs
+          </button>
         </div>
       </div>
 
@@ -216,20 +229,17 @@ export const BenchmarkPage: React.FC = () => {
           {wizardStep === 2 && (
             <Card>
               <CardHeader>
-                <CardTitle>Confirm Selected Racers</CardTitle>
+                <CardTitle>Select & Configure Benchmark Racers</CardTitle>
                 <CardDescription>
                   These algorithms will race identically on every generated benchmark maze.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-6">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  {participants.map((p, idx) => (
-                    <div key={idx} className="p-4 rounded-xl border border-border bg-surface-2 flex flex-col gap-1">
-                      <span className="font-bold text-base text-text uppercase">{p.algorithm}</span>
-                      <span className="text-xs text-muted">{p.heuristic || "Unweighted"}</span>
-                    </div>
-                  ))}
-                </div>
+                <RacerPicker
+                  selected={participants}
+                  onChange={(p) => setParticipants(p)}
+                  max={6}
+                />
 
                 <div className="flex items-center justify-between pt-4 border-t border-border">
                   <Button variant="secondary" onClick={() => setWizardStep(1)}>
@@ -435,6 +445,66 @@ export const BenchmarkPage: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* TAB 3: PAST RUNS */}
+      {activeTab === "runs" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Historical Benchmark Runs</CardTitle>
+            <CardDescription>
+              Previously executed batch benchmark runs saved in the local database.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingRuns ? (
+              <div className="py-12 text-center text-muted text-xs">Loading past benchmark runs...</div>
+            ) : pastRunsData?.runs && pastRunsData.runs.length > 0 ? (
+              <div className="overflow-x-auto border border-border rounded-xl">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-border bg-surface-2 text-muted">
+                      <th className="p-3">ID / DATE</th>
+                      <th className="p-3">MAZES</th>
+                      <th className="p-3">REPEATS</th>
+                      <th className="p-3">STATUS</th>
+                      <th className="p-3">ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pastRunsData.runs.map((run: any) => (
+                      <tr key={run.id} className="border-b border-border/50 hover:bg-surface-2/40">
+                        <td className="p-3">
+                          <div className="font-bold text-text">#{run.id}</div>
+                          <div className="text-[10px] text-muted">{run.created_at || "—"}</div>
+                        </td>
+                        <td className="p-3 font-bold text-brand">{run.mazes_total || run.mazes_count || "—"}</td>
+                        <td className="p-3 text-text">{run.repeats || 1}×</td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">
+                            Completed
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <button
+                            onClick={() => window.open(`/api/benchmark/runs/${run.id}/csv?table=summary`, "_blank")}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface border border-border text-[11px] text-brand hover:brightness-110"
+                          >
+                            <Download className="w-3 h-3" /> Export CSV
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="py-12 text-center text-muted text-xs">
+                No past benchmark runs found. Execute a batch run in the Wizard tab!
               </div>
             )}
           </CardContent>

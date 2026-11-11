@@ -147,3 +147,4 @@ def run_teaching_snippet(req: LearnRunRequest) -> dict:
         "cells_checked": search.expanded_count,
         "same_as_engine": True,
     }
+

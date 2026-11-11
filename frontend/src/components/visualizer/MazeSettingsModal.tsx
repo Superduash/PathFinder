@@ -220,3 +220,4 @@ export const MazeSettingsModal: React.FC<MazeSettingsModalProps> = ({
     </div>
   );
 };
+

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAppStore } from "@/store/useAppStore";
 import { useRace } from "@/hooks/useRace";
-import { useMazeCanvas } from "@/hooks/useMazeCanvas";
+import { useMazeCanvas, type OverlayMode } from "@/hooks/useMazeCanvas";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { RacePanel } from "@/components/RacePanel";
 import { TilePalette } from "@/components/visualizer/TilePalette";
@@ -9,11 +10,15 @@ import { RacersSidebar } from "@/components/visualizer/RacersSidebar";
 import { VisualizerToolbar } from "@/components/visualizer/VisualizerToolbar";
 import { ResultStrip } from "@/components/visualizer/ResultStrip";
 import { MazeSettingsModal, type MazeConfig } from "@/components/visualizer/MazeSettingsModal";
+import { NarratorBar } from "@/components/maze/NarratorBar";
+import { WinnerBanner } from "@/components/maze/WinnerBanner";
+import { startVisualizerTour } from "@/lib/tour";
 import { request } from "@/lib/api";
 import { notify } from "@/lib/notify";
 import type { Maze } from "@/lib/types";
 
 export const VisualizerPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const {
     maze,
     setMaze,
@@ -30,6 +35,11 @@ export const VisualizerPage: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
+  // Overlay Mode and Heuristic Map state (§4.3)
+  const [overlayMode, setOverlayMode] = useState<OverlayMode>("off");
+  const [showHintMap, setShowHintMap] = useState<boolean>(false);
+  const [heuristicMap, setHeuristicMap] = useState<number[] | null>(null);
+
   const [mazeConfig, setMazeConfig] = useState<MazeConfig>({
     rows: 21,
     cols: 21,
@@ -45,11 +55,75 @@ export const VisualizerPage: React.FC = () => {
     raceState,
     stats,
     winnerIdx,
+    winnerReason,
+    insights,
+    serverNote,
+    stepCount,
     startRace,
     pauseRace,
     stepRace,
     resetRace,
   } = useRace(maze, participants, speed);
+
+  // Deep-linking params support (?preset=...&racers=bfs,astar)
+  useEffect(() => {
+    const presetParam = searchParams.get("preset");
+    const racersParam = searchParams.get("racers");
+
+    if (presetParam) {
+      handleLoadPreset(presetParam);
+    }
+    if (racersParam) {
+      const algs = racersParam.split(",").map((s) => s.trim().toLowerCase());
+      if (algs.length > 0) {
+        setParticipants(
+          algs.slice(0, 6).map((alg) => ({
+            algorithm: alg,
+            heuristic: alg === "greedy" || alg === "astar" ? "manhattan" : null,
+          }))
+        );
+      }
+    }
+  }, [searchParams]);
+
+  // First-visit interactive tour
+  useEffect(() => {
+    const seen = localStorage.getItem("pathfinder_tour_seen");
+    if (!seen) {
+      localStorage.setItem("pathfinder_tour_seen", "true");
+      const timer = setTimeout(() => {
+        startVisualizerTour();
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Fetch heuristic distance gradient when enabled or when maze changes
+  useEffect(() => {
+    if (!showHintMap || !maze) {
+      setHeuristicMap(null);
+      return;
+    }
+
+    const primaryHeuristic =
+      participants.find((p) => p.heuristic)?.heuristic || "manhattan";
+
+    request<{ values: (number | null)[] }>("/api/maze/heuristic-map", {
+      method: "POST",
+      body: JSON.stringify({
+        maze,
+        heuristic: primaryHeuristic,
+      }),
+    })
+      .then((res) => {
+        if (res && res.values) {
+          setHeuristicMap(res.values.map((v) => (v === null ? -1 : v)));
+        }
+      })
+      .catch(() => {
+        setHeuristicMap(null);
+      });
+  }, [showHintMap, maze, participants]);
 
   // Generate maze from config
   const handleGenerate = async (cfg: MazeConfig, suppressToast: boolean = false) => {
@@ -153,14 +227,8 @@ export const VisualizerPage: React.FC = () => {
     },
     { key: "s", handler: () => stepRace() },
     { key: "r", handler: () => resetRace() },
-    {
-      key: "[",
-      handler: () => setSpeed(Math.max(1, speed - 1)),
-    },
-    {
-      key: "]",
-      handler: () => setSpeed(Math.min(10, speed + 1)),
-    },
+    { key: "[", handler: () => setSpeed(Math.max(1, speed - 1)) },
+    { key: "]", handler: () => setSpeed(Math.min(6, speed + 1)) },
   ]);
 
   const toggleParticipant = (algId: string) => {
@@ -211,6 +279,8 @@ export const VisualizerPage: React.FC = () => {
     return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
   };
 
+  const winnerParticipant = winnerIdx !== null ? stats[winnerIdx] : null;
+
   return (
     <div className="flex-1 flex flex-col w-full max-w-[1700px] mx-auto px-4 py-3 gap-3">
       {/* 1. Header Toolbar */}
@@ -230,19 +300,44 @@ export const VisualizerPage: React.FC = () => {
         onToggleViewMode={() =>
           setViewMode((prev) => (prev === "edit" ? "race" : "edit"))
         }
+        stepsCount={stepCount}
+        overlayMode={overlayMode}
+        onOverlayModeChange={setOverlayMode}
+        showHintMap={showHintMap}
+        onToggleHintMap={() => setShowHintMap((v) => !v)}
       />
+
+      {/* Narrator Banner (§5.4) */}
+      <NarratorBar
+        stats={stats}
+        raceState={raceState}
+        serverNote={serverNote}
+      />
+
+      {/* Winner Banner (§5.3) */}
+      {raceState === "finished" && winnerParticipant && (
+        <WinnerBanner
+          winner={winnerParticipant}
+          winnerReason={winnerReason}
+          insights={insights}
+          onRaceAgain={handleStartRace}
+          onNewMaze={handleNewMaze}
+        />
+      )}
 
       {/* 2. Middle Row: [Toolbox] | [Stage] | [Racers] */}
       <div className="flex-1 flex flex-col lg:flex-row gap-3 min-h-[460px] items-stretch">
         {/* Left: Tile Palette & Legend (§3.5) */}
-        <TilePalette
-          selectedTool={selectedTool}
-          onSelectTool={(tool) => {
-            setSelectedTool(tool);
-            setViewMode("edit");
-          }}
-          disabled={raceState === "running"}
-        />
+        <div id="toolbox-step" className="shrink-0">
+          <TilePalette
+            selectedTool={selectedTool}
+            onSelectTool={(tool) => {
+              setSelectedTool(tool);
+              setViewMode("edit");
+            }}
+            disabled={raceState === "running"}
+          />
+        </div>
 
         {/* Center: Stage Viewport (§3.4) */}
         <main className="flex-1 flex flex-col bg-surface border border-border rounded-xl p-3 shadow-xs min-h-[420px] overflow-hidden">
@@ -282,6 +377,8 @@ export const VisualizerPage: React.FC = () => {
                           stats={s}
                           isWinner={winnerIdx === idx}
                           maxExpandedSeen={maxExpandedSeen}
+                          overlayMode={overlayMode}
+                          heuristicMap={heuristicMap}
                         />
                       )}
                     </div>
@@ -293,20 +390,24 @@ export const VisualizerPage: React.FC = () => {
         </main>
 
         {/* Right: Racers Sidebar (§3.3) */}
-        <RacersSidebar
-          participants={participants}
-          onToggleParticipant={toggleParticipant}
-          onUpdateHeuristic={handleUpdateHeuristic}
-          diagonal={mazeConfig.diagonal}
-        />
+        <div id="racers-step" className="shrink-0">
+          <RacersSidebar
+            participants={participants}
+            onToggleParticipant={toggleParticipant}
+            onUpdateHeuristic={handleUpdateHeuristic}
+            diagonal={mazeConfig.diagonal}
+          />
+        </div>
       </div>
 
       {/* 3. Bottom Row: Compact Results Strip (§5.2) */}
-      <ResultStrip
-        stats={stats}
-        winnerIdx={winnerIdx}
-        maxExpandedSeen={maxExpandedSeen}
-      />
+      <div id="results-step">
+        <ResultStrip
+          stats={stats}
+          winnerIdx={winnerIdx}
+          maxExpandedSeen={maxExpandedSeen}
+        />
+      </div>
 
       {/* Settings Modal (§3.2) */}
       <MazeSettingsModal

@@ -16,6 +16,7 @@ CANDIDATES = [
     {"name": "bfs", "algorithm": "bfs", "heuristic": None},
     {"name": "astar_manhattan", "algorithm": "astar", "heuristic": "manhattan"},
     {"name": "greedy", "algorithm": "greedy", "heuristic": "manhattan"},
+    {"name": "bds", "algorithm": "bds", "heuristic": None},
 ]
 
 

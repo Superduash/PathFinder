@@ -1,22 +1,24 @@
 import { useRef, useEffect, useCallback } from "react";
 import type { Maze } from "@/lib/types";
+import type { CellInfo } from "@/hooks/useRace";
 
-export interface CellBirth {
-  birthTime: number;
-}
+export type OverlayMode = "off" | "order" | "g" | "h" | "f";
 
 interface UseMazeCanvasOptions {
   maze: Maze | null;
   algorithmColor?: string; // Single hue owned by the participant (e.g. #38BDF8)
   exploredSet?: Set<string>;
   frontierSet?: Set<string>;
+  cellInfoMap?: Map<string, CellInfo>;
+  overlayMode?: OverlayMode;
   currentNode?: [number, number] | null;
   path?: [number, number][] | null;
   heatmap?: { r: number; c: number; h: number }[] | null;
+  heuristicMap?: number[] | null;
   interactive?: boolean;
   onCellClick?: (r: number, c: number) => void;
   hoverCell?: [number, number] | null;
-  showHoverCost?: boolean;
+  onHoverCell?: (info: { r: number; c: number; x: number; y: number } | null) => void;
 }
 
 export function useMazeCanvas({
@@ -24,12 +26,16 @@ export function useMazeCanvas({
   algorithmColor = "#2DD4BF",
   exploredSet,
   frontierSet,
+  cellInfoMap,
+  overlayMode = "off",
   currentNode,
   path,
   heatmap,
+  heuristicMap,
   interactive = false,
   onCellClick,
   hoverCell,
+  onHoverCell,
 }: UseMazeCanvasOptions) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isPointerDownRef = useRef(false);
@@ -123,7 +129,7 @@ export function useMazeCanvas({
           ctx.roundRect(x + inset, y + inset, cellW - inset * 2, cellH - inset * 2, 4);
           ctx.fill();
         } else if (code === 2) {
-          // Sand (slow, cost 3): warm stipple dot pattern
+          // Sand (slow, cost 3): warm stipple pattern
           ctx.fillStyle = isDark ? "#282218" : "#F4EBD9";
           ctx.fillRect(x, y, cellW, cellH);
           ctx.fillStyle = isDark ? "#D97706" : "#B45309";
@@ -146,7 +152,28 @@ export function useMazeCanvas({
       }
     }
 
-    // 2. Heatmap overlay (if ML active)
+    // 2. Heuristic Map Gradient Overlay (if active)
+    if (heuristicMap && heuristicMap.length > 0) {
+      let maxH = 1;
+      for (const v of heuristicMap) {
+        if (v !== null && v !== undefined && v > maxH) maxH = v;
+      }
+      for (let r = 0; r < maze.rows; r++) {
+        for (let c = 0; c < maze.cols; c++) {
+          const idx = r * maze.cols + c;
+          const hVal = heuristicMap[idx];
+          if (hVal !== null && hVal !== undefined && maze.cells[idx] !== 1) {
+            const ratio = 1 - Math.min(1, hVal / maxH);
+            const x = c * cellW;
+            const y = r * cellH;
+            ctx.fillStyle = `rgba(45, 212, 191, ${0.08 + ratio * 0.35})`;
+            ctx.fillRect(x, y, cellW, cellH);
+          }
+        }
+      }
+    }
+
+    // 3. Heatmap overlay (if ML active)
     if (heatmap && heatmap.length > 0) {
       let maxH = 0;
       for (const item of heatmap) if (item.h > maxH) maxH = item.h;
@@ -159,7 +186,7 @@ export function useMazeCanvas({
       }
     }
 
-    // 3. Checked Cells (Explored): Single Algorithm Hue at ~22% alpha with cell fade-in
+    // 4. Checked Cells (Explored): Single Algorithm Hue at ~22% alpha with cell fade-in
     if (exploredSet && exploredSet.size > 0) {
       for (const key of exploredSet) {
         const [r, c] = key.split(",").map(Number);
@@ -183,7 +210,7 @@ export function useMazeCanvas({
       }
     }
 
-    // 4. Waiting Cells (Frontier): 2px Ring Only, Algorithm Hue, NO Fill
+    // 5. Waiting Cells (Frontier): 2px Ring Only, Algorithm Hue, NO Fill
     if (frontierSet && frontierSet.size > 0) {
       ctx.strokeStyle = algorithmColor;
       ctx.lineWidth = 1.75;
@@ -196,7 +223,7 @@ export function useMazeCanvas({
       }
     }
 
-    // 5. Looking at now (Current Node): Solid Dot + Pulsing Halo
+    // 6. Looking at now (Current Node): Solid Dot + Pulsing Halo
     if (currentNode) {
       const [cr, cc] = currentNode;
       const cx = cc * cellW + cellW / 2;
@@ -218,7 +245,45 @@ export function useMazeCanvas({
       ctx.fill();
     }
 
-    // 6. Subtle Grid Lines (6% opacity)
+    // 7. Numbers on Cells Overlay (Order, g, h, f)
+    if (overlayMode && overlayMode !== "off" && cellInfoMap && cellInfoMap.size > 0) {
+      const minDimension = Math.min(cellW, cellH);
+      if (minDimension >= 16) {
+        ctx.font = `600 ${Math.max(9, Math.floor(minDimension * 0.36))}px "Inter Variable", sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        for (const [key, info] of cellInfoMap.entries()) {
+          const [r, c] = key.split(",").map(Number);
+          const cx = c * cellW + cellW / 2;
+          const cy = r * cellH + cellH / 2;
+
+          let valStr = "";
+          if (overlayMode === "order") {
+            valStr = String(info.order);
+          } else if (overlayMode === "g") {
+            valStr = String(Math.round(info.g * 10) / 10);
+          } else if (overlayMode === "h") {
+            valStr = info.h !== null ? String(Math.round(info.h * 10) / 10) : "";
+          } else if (overlayMode === "f") {
+            const fVal = info.h !== null ? info.g + info.h : info.g;
+            valStr = String(Math.round(fVal * 10) / 10);
+          }
+
+          if (valStr) {
+            ctx.fillStyle = isDark ? "#0A0D14" : "#FFFFFF";
+            ctx.shadowColor = isDark ? "#000000" : "#FFFFFF";
+            ctx.shadowBlur = 3;
+            ctx.fillText(valStr, cx, cy);
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = isDark ? "#F2F4F8" : "#14161B";
+            ctx.fillText(valStr, cx, cy);
+          }
+        }
+      }
+    }
+
+    // 8. Subtle Grid Lines (6% opacity)
     ctx.strokeStyle = isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.06)";
     ctx.lineWidth = 0.5;
     ctx.beginPath();
@@ -232,7 +297,7 @@ export function useMazeCanvas({
     }
     ctx.stroke();
 
-    // 7. Final Shortest Route Found: White Core + Algorithm Hue Outline
+    // 9. Final Shortest Route Found: White Core + Algorithm Hue Outline
     if (path && path.length > 0) {
       pathAnimProgressRef.current = Math.min(1, pathAnimProgressRef.current + 0.04);
       const visibleCount = Math.max(1, Math.floor(path.length * pathAnimProgressRef.current));
@@ -268,7 +333,7 @@ export function useMazeCanvas({
       pathAnimProgressRef.current = 0;
     }
 
-    // 8. Start (Green Circle Flag) & Goal (Coral Bullseye Target with Pin)
+    // 10. Start (Green Circle Flag) & Goal (Coral Bullseye Target)
     const [sr, sc] = maze.start;
     const [gr, gc] = maze.goal;
     const markerRadius = Math.min(cellW, cellH) * 0.38;
@@ -280,7 +345,6 @@ export function useMazeCanvas({
     ctx.beginPath();
     ctx.arc(sx, sy, markerRadius, 0, Math.PI * 2);
     ctx.fill();
-    // Inner flag icon
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(sx - markerRadius * 0.35, sy - markerRadius * 0.5, 2, markerRadius);
     ctx.beginPath();
@@ -290,7 +354,7 @@ export function useMazeCanvas({
     ctx.closePath();
     ctx.fill();
 
-    // Goal (Coral Bullseye Target)
+    // Goal
     const gx = gc * cellW + cellW / 2;
     const gy = gr * cellH + cellH / 2;
     const goalPulse = 1 + 0.08 * Math.sin(now / 350);
@@ -305,7 +369,7 @@ export function useMazeCanvas({
     ctx.arc(gx, gy, markerRadius * 0.45, 0, Math.PI * 2);
     ctx.fill();
 
-    // 9. Hover Cell Highlight Ring
+    // 11. Hover Cell Highlight Ring
     if (hoverCell) {
       const [hr, hc] = hoverCell;
       if (hr >= 0 && hr < maze.rows && hc >= 0 && hc < maze.cols) {
@@ -316,7 +380,19 @@ export function useMazeCanvas({
     }
 
     ctx.restore();
-  }, [maze, algorithmColor, exploredSet, frontierSet, currentNode, path, heatmap, hoverCell]);
+  }, [
+    maze,
+    algorithmColor,
+    exploredSet,
+    frontierSet,
+    cellInfoMap,
+    overlayMode,
+    currentNode,
+    path,
+    heatmap,
+    heuristicMap,
+    hoverCell,
+  ]);
 
   // Unified RequestAnimationFrame render loop
   useEffect(() => {
@@ -329,7 +405,7 @@ export function useMazeCanvas({
     return () => cancelAnimationFrame(animId);
   }, [render]);
 
-  // Pointer event handlers with Bresenham dragging
+  // Pointer event handlers with Bresenham dragging & hover tracking
   const getCellFromEvent = (e: React.PointerEvent<HTMLCanvasElement>): [number, number] | null => {
     const canvas = canvasRef.current;
     if (!canvas || !maze) return null;
@@ -356,8 +432,16 @@ export function useMazeCanvas({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!interactive || !isPointerDownRef.current) return;
     const cell = getCellFromEvent(e);
+    if (onHoverCell) {
+      if (cell) {
+        onHoverCell({ r: cell[0], c: cell[1], x: e.clientX, y: e.clientY });
+      } else {
+        onHoverCell(null);
+      }
+    }
+
+    if (!interactive || !isPointerDownRef.current) return;
     if (cell && onCellClick && lastCellRef.current) {
       const [r0, c0] = lastCellRef.current;
       const [r1, c1] = cell;
@@ -377,12 +461,17 @@ export function useMazeCanvas({
     } catch {}
   };
 
+  const handlePointerLeave = () => {
+    if (onHoverCell) onHoverCell(null);
+  };
+
   return {
     canvasRef,
     handlers: {
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,
       onPointerUp: handlePointerUp,
+      onPointerLeave: handlePointerLeave,
     },
   };
 }

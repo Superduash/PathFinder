@@ -53,10 +53,6 @@ class BidirectionalSearch:
     def frontier_count(self) -> int:
         return len(self.queue_f) + len(self.queue_b)
 
-    @property
-    def expanded(self) -> int:
-        return self.expanded_count
-
     def step(self) -> bool:
         if self.status == "init":
             self.status = "running"
@@ -109,8 +105,8 @@ class BidirectionalSearch:
         curr_dist = dist_this[curr]
 
         # Check termination condition: if both frontiers have advanced past the best connection
-        front_f = self.dist_f[self.queue_f[0]] if self.queue_f else (self.dist_f.get(self.meeting_cell, 0) if self.meeting_cell else curr_dist)
-        front_b = self.dist_b[self.queue_b[0]] if self.queue_b else (self.dist_b.get(self.meeting_cell, 0) if self.meeting_cell else curr_dist)
+        front_f = self.dist_f.get(self.queue_f[0], curr_dist) if self.queue_f else curr_dist
+        front_b = self.dist_b.get(self.queue_b[0], curr_dist) if self.queue_b else curr_dist
         if self.meeting_cell is not None and (front_f + front_b >= self.best_moves):
             self._reconstruct_bds_path()
             self.status = "found"
@@ -157,7 +153,12 @@ class BidirectionalSearch:
 
         return False
 
-    def run_to_completion(self, max_expansions: Optional[int] = None) -> BidirectionalSearch:
+    @property
+    def expanded(self) -> int:
+        """Total number of nodes expanded (popped from frontier)."""
+        return self.expanded_count
+
+    def run_to_completion(self, max_expansions: Optional[int] = None) -> "BidirectionalSearch":
         while self.status in ("init", "running"):
             if max_expansions and self.expanded_count >= max_expansions:
                 self.status = "failed"
@@ -191,3 +192,4 @@ class BidirectionalSearch:
         moves, cost = route_stats(self.maze, full_path)
         self.path_length = moves
         self.path_cost = cost
+

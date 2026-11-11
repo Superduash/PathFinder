@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTheme } from "next-themes";
-import { useMazeCanvas } from "@/hooks/useMazeCanvas";
+import { useMazeCanvas, type OverlayMode } from "@/hooks/useMazeCanvas";
 import { getAlgorithmColor, ALGORITHM_VISUALS } from "@/lib/palette";
+import { CellInspector, type HoverCellData } from "@/components/visualizer/CellInspector";
 import type { Maze } from "@/lib/types";
 import type { ParticipantStats } from "@/hooks/useRace";
 
@@ -10,6 +11,8 @@ interface RacePanelProps {
   stats: ParticipantStats;
   isWinner: boolean;
   maxExpandedSeen: number;
+  overlayMode?: OverlayMode;
+  heuristicMap?: number[] | null;
 }
 
 export const RacePanel: React.FC<RacePanelProps> = ({
@@ -17,9 +20,12 @@ export const RacePanel: React.FC<RacePanelProps> = ({
   stats,
   isWinner,
   maxExpandedSeen,
+  overlayMode = "off",
+  heuristicMap,
 }) => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme !== "light";
+  const [hoverData, setHoverData] = useState<HoverCellData | null>(null);
 
   const algKey = stats.algorithm.toLowerCase();
   const visual = ALGORITHM_VISUALS[algKey] || {
@@ -29,21 +35,28 @@ export const RacePanel: React.FC<RacePanelProps> = ({
   };
   const color = getAlgorithmColor(algKey, isDark);
 
-  const { canvasRef } = useMazeCanvas({
+  const { canvasRef, handlers } = useMazeCanvas({
     maze,
     algorithmColor: color,
     exploredSet: stats.exploredSet,
     frontierSet: stats.frontierSet,
+    cellInfoMap: stats.cellInfoMap,
+    overlayMode,
     currentNode: stats.currentNode,
     path: stats.path,
+    heuristicMap,
     interactive: false,
+    onHoverCell: setHoverData,
   });
 
   const relativeEffort = maxExpandedSeen > 0 ? (stats.expanded / maxExpandedSeen) * 100 : 0;
+  const hoverCellInfo = hoverData
+    ? stats.cellInfoMap?.get(`${hoverData.r},${hoverData.c}`)
+    : undefined;
 
   return (
     <div
-      className={`flex flex-col rounded-xl border bg-surface overflow-hidden transition-all duration-200 shadow-sm ${
+      className={`relative flex flex-col rounded-xl border bg-surface overflow-hidden transition-all duration-200 shadow-sm ${
         isWinner
           ? "border-brand ring-2 ring-brand/40 shadow-md"
           : "border-border hover:border-border/80"
@@ -86,7 +99,12 @@ export const RacePanel: React.FC<RacePanelProps> = ({
 
       {/* Canvas Viewport */}
       <div className="relative w-full aspect-square bg-bg">
-        <canvas ref={canvasRef} className="w-full h-full block" />
+        <canvas
+          ref={canvasRef}
+          onPointerMove={handlers.onPointerMove}
+          onPointerLeave={handlers.onPointerLeave}
+          className="w-full h-full block cursor-crosshair"
+        />
       </div>
 
       {/* Effort progress indicator */}
@@ -99,6 +117,15 @@ export const RacePanel: React.FC<RacePanelProps> = ({
           }}
         />
       </div>
+
+      {/* Cell Inspector Hover Card */}
+      <CellInspector
+        data={hoverData}
+        maze={maze}
+        cellInfo={hoverCellInfo}
+        algorithm={stats.algorithm}
+        heuristic={stats.heuristic}
+      />
     </div>
   );
 };

@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 @import "@fontsource-variable/inter";
+@import "katex/dist/katex.min.css";
+@import "driver.js/dist/driver.css";
 @import "./tokens.css";
 @plugin "@tailwindcss/typography";
 

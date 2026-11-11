@@ -15,6 +15,9 @@ export interface AlgorithmVisual {
   softLight: string;
 }
 
+export const ALGORITHMS = ["bfs", "dfs", "ucs", "greedy", "astar", "bds"] as const;
+export type AlgorithmKey = typeof ALGORITHMS[number];
+
 export const ALGORITHM_VISUALS: Record<string, AlgorithmVisual> = {
   bfs: {
     key: "bfs",
@@ -124,3 +127,4 @@ export function readPalette(isDark: boolean = true) {
     terrain: TERRAIN_PALETTE,
   };
 }
+

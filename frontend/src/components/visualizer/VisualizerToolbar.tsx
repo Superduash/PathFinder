@@ -8,8 +8,10 @@ import {
   Settings,
   Pencil,
   Grid,
+  Lightbulb,
 } from "lucide-react";
 import { PresetsPopover } from "./PresetsPopover";
+import type { OverlayMode } from "@/hooks/useMazeCanvas";
 
 interface VisualizerToolbarProps {
   raceState: "idle" | "ready" | "running" | "paused" | "finished" | "disconnected";
@@ -26,15 +28,27 @@ interface VisualizerToolbarProps {
   viewMode: "edit" | "race";
   onToggleViewMode: () => void;
   stepsCount?: number;
+  overlayMode: OverlayMode;
+  onOverlayModeChange: (mode: OverlayMode) => void;
+  showHintMap: boolean;
+  onToggleHintMap: () => void;
 }
 
 const SPEED_OPTIONS = [
   { label: "0.25×", value: 1 },
-  { label: "0.5×", value: 3 },
-  { label: "1×", value: 5 },
-  { label: "2×", value: 7 },
-  { label: "4×", value: 8 },
-  { label: "Max", value: 10 },
+  { label: "0.5×", value: 2 },
+  { label: "1×", value: 3 },
+  { label: "2×", value: 4 },
+  { label: "4×", value: 5 },
+  { label: "Max", value: 6 },
+];
+
+const OVERLAY_OPTIONS: { label: string; mode: OverlayMode; title: string }[] = [
+  { label: "Off", mode: "off", title: "No numbers on cells" },
+  { label: "Order", mode: "order", title: "Order checked (1, 2, 3...)" },
+  { label: "g", mode: "g", title: "Cost from start g(n)" },
+  { label: "h", mode: "h", title: "Heuristic hint to goal h(n)" },
+  { label: "f", mode: "f", title: "Total evaluation f = g + h" },
 ];
 
 export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
@@ -52,13 +66,17 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
   viewMode,
   onToggleViewMode,
   stepsCount = 0,
+  overlayMode,
+  onOverlayModeChange,
+  showHintMap,
+  onToggleHintMap,
 }) => {
   const isRunning = raceState === "running";
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-surface border border-border rounded-xl shadow-xs select-none">
       {/* Playback Controls */}
-      <div className="flex items-center gap-1.5">
+      <div id="playback-step" className="flex items-center gap-1.5">
         {isRunning ? (
           <button
             onClick={onPause}
@@ -104,7 +122,7 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
       </div>
 
       {/* Speed Multiplier Segmented Control (§5.1) */}
-      <div className="flex items-center gap-1 bg-surface-2 p-0.5 rounded-lg border border-border">
+      <div id="speed-step" className="flex items-center gap-1 bg-surface-2 p-0.5 rounded-lg border border-border">
         <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2">
           Speed
         </span>
@@ -126,8 +144,45 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
         })}
       </div>
 
-      {/* Maze Menu, Quick Dice, and Settings Modal */}
+      {/* Numbers / Cell Overlay Control (§4.3) */}
+      <div id="overlay-step" className="flex items-center gap-1 bg-surface-2 p-0.5 rounded-lg border border-border">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2">
+          Show
+        </span>
+        {OVERLAY_OPTIONS.map((opt) => {
+          const isActive = overlayMode === opt.mode;
+          return (
+            <button
+              key={opt.mode}
+              onClick={() => onOverlayModeChange(opt.mode)}
+              title={opt.title}
+              className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                isActive
+                  ? "bg-surface text-brand shadow-xs font-bold"
+                  : "text-muted hover:text-text"
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Hint Map & Maze Actions */}
       <div className="flex items-center gap-1.5">
+        <button
+          onClick={onToggleHintMap}
+          title={showHintMap ? "Hide heuristic gradient" : "Show heuristic gradient distance field"}
+          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors shadow-2xs ${
+            showHintMap
+              ? "border-brand bg-brand/15 text-brand"
+              : "border-border bg-surface-2 hover:bg-surface text-muted hover:text-text"
+          }`}
+        >
+          <Lightbulb className="w-3.5 h-3.5" />
+          <span>Hint Map</span>
+        </button>
+
         <PresetsPopover onSelectPreset={onSelectPreset} activePreset={activePreset} />
 
         <button
