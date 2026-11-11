@@ -66,38 +66,71 @@ Run the integrated local server (serves the backend API, WebSocket, and compiled
 ```bash
 python run.py
 ```
-Open your browser to: **`http://127.0.0.1:8000`**
+Or double-click **`start-all.bat`** on Windows.
+The browser automatically opens to: **`http://127.0.0.1:8000`**
 
-### 3. Developer Mode (HMR)
-To run frontend hot-module reloading separately:
-```bash
-# Terminal 1: Backend
-python run.py
+#### Command-Line Options:
+- **Seed sample demo data:**
+  ```bash
+  python run.py --seed-demo
+  ```
+  Runs a quick benchmark and trains fast ML models with fixed seeds so first-time demos look immediately populated.
+- **Wipe and reset database:**
+  ```bash
+  python run.py --reset-db
+  ```
+- **Custom host and port:**
+  ```bash
+  python run.py --host 127.0.0.1 --port 8000
+  ```
+  *(If port 8000 is occupied, PathFinder automatically searches and binds to the next available port).*
+- **No browser pop-up:**
+  ```bash
+  python run.py --no-browser
+  ```
 
-# Terminal 2: Frontend Vite dev server
-cd frontend
-npm run dev
-```
+### 3. Developer Mode (Hot Reload)
+To run frontend and backend with hot-reloading:
+- **Windows:**
+  ```powershell
+  .\scripts\dev.ps1
+  ```
+- **Linux / macOS:**
+  ```bash
+  ./scripts/dev.sh
+  ```
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing & Verification
 
-Run backend tests:
+Run the full pytest suite (27 comprehensive unit and integration tests):
 ```bash
 python -m pytest -q
 ```
 
-Run frontend typechecking and linting:
+Run latency and benchmark SLA performance checks:
 ```bash
-cd frontend
-npm run typecheck
-npm run lint
+python scripts/perf_check.py
 ```
+
+Re-generate TypeScript API types from FastAPI OpenAPI:
+```bash
+python scripts/gen_types.py
+```
+
+---
+
+## 🔧 Troubleshooting
+
+- **Port in use:** PathFinder automatically attempts binding to `port + 1` through `port + 5`. You can also manually specify `--port 8080`.
+- **Database reset:** Delete the `data/` directory or run `python run.py --reset-db` to reset state.
+- **Python version:** Requires Python 3.11 or newer (tested on Python 3.12).
+- **Node version:** Requires Node.js 20 or newer.
 
 ---
 
 ## 🏛 Architecture
 
-- **Backend:** FastAPI, Uvicorn, Pydantic v2, NumPy, Scikit-learn, WebSockets.
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Radix UI primitives, Recharts, Zustand, TanStack Query.
+- **Backend:** FastAPI, Uvicorn, Pydantic v2, SQLite WAL mode with SQLAlchemy 2.0, NumPy, Scikit-learn, WebSockets.
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Radix UI primitives, Motion, Recharts, Zustand, TanStack Query.

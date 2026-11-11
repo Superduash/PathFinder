@@ -103,3 +103,4 @@ def benchmark_insights(summary_rows: list[dict[str, Any]]) -> list[dict[str, Any
         })
 
     return insights
+

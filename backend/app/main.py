@@ -2,7 +2,9 @@
 from __future__ import annotations
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI
+import logging
+import time
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
@@ -21,6 +23,12 @@ from backend.app.routes import (
     health, maze, solve, meta, benchmark, ws, jobs_api, ml,
     library, history, settings as settings_route, runs
 )
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger("pathfinder.api")
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIST = ROOT_DIR / "frontend" / "dist"
@@ -55,6 +63,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def request_logging_and_caching(request: Request, call_next):
+    t0 = time.perf_counter()
+    response = await call_next(request)
+    dt_ms = (time.perf_counter() - t0) * 1000
+
+    path = request.url.path
+    if request.method != "GET" or dt_ms > 500:
+        logger.info("%s %s -> %s (%.1f ms)", request.method, path, response.status_code, dt_ms)
+
+    # Static assets cache headers per backend.md §8.2
+    if path.startswith("/assets/"):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path == "/" or path.endswith("index.html"):
+        response.headers["Cache-Control"] = "no-cache"
+
+    return response
 
 # Include API routers under /api prefix
 app.include_router(health.router, prefix="/api", tags=["health"])

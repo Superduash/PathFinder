@@ -237,3 +237,4 @@ def delete_benchmark_run(session: Session, run_id: int) -> bool:
         raise ApiError(NOT_FOUND, f"Benchmark run #{run_id} not found.")
     session.delete(run)
     return True
+

@@ -246,3 +246,4 @@ def test_meta_route_enrichments():
     assert len(meta["speed_levels"]) == 5
     assert meta["speed_levels"][2]["label"] == "Relaxed"
     assert meta["speed_levels"][2]["k"] == 5
+
