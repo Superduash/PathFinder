@@ -22,3 +22,4 @@ def update_settings(
     db: Session = Depends(get_db),
 ):
     return settings_service.update_settings(db, payload)
+

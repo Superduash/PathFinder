@@ -5,7 +5,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from backend.app.race import RaceSession
 from backend.app.maze.grid import MazeGrid
 from backend.app.jobs import job_manager
-from backend.app.errors import BUSY
+from backend.app.errors import ApiError, BUSY
 
 router = APIRouter()
 
@@ -60,7 +60,9 @@ async def websocket_race(websocket: WebSocket):
                         diagonal=maze_data.get("diagonal", False),
                     )
                     grid.validate()
-                    session = RaceSession(race_id=race_id, maze=grid, participants=participants)
+                    options = msg.get("options", {})
+                    narrate = options.get("narrate", msg.get("narrate", True))
+                    session = RaceSession(race_id=race_id, maze=grid, participants=participants, narrate=narrate)
                     ready_msg = session.get_ready_message()
                     await websocket.send_text(ready_msg.model_dump_json())
                 except Exception as e:
@@ -75,30 +77,35 @@ async def websocket_race(websocket: WebSocket):
                     })
                     continue
 
-                k = int(msg.get("k", 5))
-                update_msg = session.step(k)
-                await websocket.send_text(update_msg.model_dump_json())
+                try:
+                    k = int(msg.get("k", msg.get("expansions", 5)))
+                    update_msg = session.step(k)
+                    await websocket.send_text(update_msg.model_dump_json())
 
-                if update_msg.all_done:
-                    summary_msg = session.get_summary_message()
-                    await websocket.send_text(summary_msg.model_dump_json())
+                    if update_msg.all_done:
+                        summary_msg = session.get_summary_message()
+                        await websocket.send_text(summary_msg.model_dump_json())
 
-                    # Auto-record completed race to race_history
-                    try:
-                        from backend.app.db.base import session_scope
-                        from backend.app.db.repo import record_race_history
-                        with session_scope() as db_session:
-                            record_race_history(
-                                session=db_session,
-                                maze_data=session.maze.to_dict(),
-                                participants=[p.spec for p in session.participants],
-                                summary=summary_msg.model_dump(),
-                                reachable=(session.c_star is not None),
-                                optimal_cost=session.c_star,
-                            )
-                    except Exception as e:
-                        import logging
-                        logging.getLogger("pathfinder.ws").warning("Failed to record race history: %s", e)
+                        # Auto-record completed race to race_history
+                        try:
+                            from backend.app.db.base import session_scope
+                            from backend.app.db.repo import record_race_history
+                            with session_scope() as db_session:
+                                record_race_history(
+                                    session=db_session,
+                                    maze_data=session.maze.to_dict(),
+                                    participants=[p.spec for p in session.participants],
+                                    summary=summary_msg.model_dump(),
+                                    reachable=(session.c_star is not None),
+                                    optimal_cost=session.c_star,
+                                )
+                        except Exception as e:
+                            import logging
+                            logging.getLogger("pathfinder.ws").warning("Failed to record race history: %s", e)
+                except ApiError as ae:
+                    await websocket.send_json({"type": "error", "code": ae.code, "message": ae.message})
+                except Exception as e:
+                    await websocket.send_json({"type": "error", "code": "STEP_FAILED", "message": str(e)})
 
             elif msg_type == "race.reset":
                 session = None

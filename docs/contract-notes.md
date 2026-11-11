@@ -41,3 +41,4 @@ This document records the design reconciliation between the original specificati
   - `jobs`
 - Race history auto-records on `race.summary` via WebSocket.
 - Library enforces 200 maze maximum (`LIBRARY_FULL`) and generates 160×160 SVG thumbnails.
+

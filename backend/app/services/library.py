@@ -169,3 +169,4 @@ def delete_saved_maze(session: Session, maze_id: int) -> bool:
     if not success:
         raise ApiError(NOT_FOUND, f"Saved maze #{maze_id} not found.")
     return True
+

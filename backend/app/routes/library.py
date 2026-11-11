@@ -88,3 +88,4 @@ def delete_maze(
 ):
     library_service.delete_saved_maze(db, maze_id)
     return {"status": "ok", "deleted": maze_id}
+

@@ -41,3 +41,4 @@ def clear_all_races(
 ):
     deleted_count = history_service.clear_race_history(db, confirm=confirm)
     return {"status": "ok", "deleted_count": deleted_count}
+

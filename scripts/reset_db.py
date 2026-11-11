@@ -26,3 +26,4 @@ def reset_db(force: bool = False):
 if __name__ == "__main__":
     force_flag = "--force" in sys.argv
     reset_db(force=force_flag)
+

@@ -14,6 +14,9 @@ export interface AlgorithmMeta {
   optimal: boolean;
   complete: boolean;
   color: string;
+  plain?: string | any;
+  shape?: string | any;
+  color_key?: string | any;
 }
 
 export interface BenchmarkConfig {
@@ -30,6 +33,7 @@ export interface BenchmarkConfig {
 }
 
 export interface ClassificationConfig {
+  name?: string;
   n_mazes?: number;
   test_size?: number;
   seed?: number;
@@ -65,6 +69,14 @@ export interface EnvironmentMeta {
   python_version: string;
   cpu_count?: number | any;
   repeats: number;
+}
+
+export interface EstimateResponse {
+  mazes_total: number;
+  runs_total: number;
+  est_seconds_low: number;
+  est_seconds_high: number;
+  too_large: boolean;
 }
 
 export interface GenerateMazeRequest {
@@ -126,12 +138,14 @@ export interface MazeMeta {
 
 export interface MetaResponse {
   algorithms: AlgorithmMeta[];
-  heuristics: string[];
-  generators: string[];
-  presets: string[];
+  heuristics: any[];
+  generators: any[];
+  presets: any[];
   cell_types: Record<string, any>;
   limits: Record<string, any>;
   defaults: Record<string, any>;
+  glossary?: Record<string, any>[];
+  speed_levels?: Record<string, any>[];
 }
 
 export interface PresetMazeRequest {
@@ -144,6 +158,7 @@ export interface RandomizeEndpointsRequest {
 }
 
 export interface RegressionConfig {
+  name?: string;
   n_mazes?: number;
   samples_per_maze?: number;
   test_size?: number;

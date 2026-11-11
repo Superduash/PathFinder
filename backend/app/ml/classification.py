@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support, con
 from sklearn.model_selection import train_test_split
 
 from backend.app.models import ClassificationConfig, ClassificationResult, ClassificationMetrics
-from backend.app.maze.generators import generate
+from backend.app.maze.generators import generate, ensure_solvable
 from backend.app.search.algorithms import create_search
 from backend.app.ml.features import extract_maze_features, CLASSIFICATION_FEATURE_NAMES
 from backend.app.ml.store import ml_store
@@ -26,13 +26,18 @@ def train_classification(job, config: ClassificationConfig) -> ClassificationRes
     y_list = []
 
     for m_idx in range(config.n_mazes):
-        if job.cancelled:
+        if getattr(job, "cancel_requested", False) or job.cancelled:
             return None
 
         seed = (config.seed * 31337 + m_idx) % (2**31)
         dens = 0.15 + (m_idx % 4) * 0.08
         m_type = "backtracker" if m_idx % 2 == 0 else "random"
-        maze = generate(type=m_type, rows=15, cols=15, density=dens, weighted=True, seed=seed)
+        from backend.app.search.reference import is_reachable
+        for retry in range(20):
+            maze = generate(type=m_type, rows=15, cols=15, density=dens, weighted=True, seed=seed)
+            if is_reachable(maze):
+                break
+            seed = (seed * 1_000_003 + retry + 1) % (2**31)
 
         # Run candidate algorithms and find winner by expanded_count
         best_alg = None
@@ -52,7 +57,7 @@ def train_classification(job, config: ClassificationConfig) -> ClassificationRes
 
         job.set_progress(m_idx + 1, config.n_mazes, f"Classified maze {m_idx + 1}/{config.n_mazes}")
 
-    if len(X_list) < 20:
+    if len(X_list) < 10:
         raise ValueError("Insufficient solvable mazes for classification.")
 
     X = np.array(X_list, dtype=np.float32)

@@ -255,6 +255,8 @@ class ParticipantState(BaseModel):
     # deltas (only in race.update)
     delta_expanded: Optional[list[list[int]]] = None   # newly expanded cells
     delta_discovered: Optional[list[list[int]]] = None  # newly discovered cells
+    current: Optional[list[int]] = None                # last cell inspected this tick
+    note: Optional[str] = None                         # narration note
 
 
 class RaceReadyMessage(BaseModel):
@@ -262,6 +264,9 @@ class RaceReadyMessage(BaseModel):
     raceId: str
     participants: list[ParticipantState]
     initial: list[list[int]]   # start/goal cells
+    reachable: bool = True
+    optimal_cost: Optional[float] = None
+    racers_meta: list[dict] = Field(default_factory=list)
 
 
 class RaceUpdateMessage(BaseModel):
@@ -270,6 +275,7 @@ class RaceUpdateMessage(BaseModel):
     tick: int
     participants: list[ParticipantState]
     all_done: bool = False
+    ms_since_start: Optional[float] = None
 
 
 class RaceSummaryMessage(BaseModel):
@@ -277,6 +283,10 @@ class RaceSummaryMessage(BaseModel):
     raceId: str
     participants: list[ParticipantState]
     ranking: list[int]   # indices into participants, best first
+    insights: list[dict] = Field(default_factory=list)
+    winner_reason: Optional[str] = None
+    reachable: bool = True
+    optimal_cost: Optional[float] = None
 
 
 class ErrorMessage(BaseModel):
@@ -290,6 +300,7 @@ class ErrorMessage(BaseModel):
 # ---------------------------------------------------------------------------
 
 class RegressionConfig(BaseModel):
+    name: str = "Regression Heuristic"
     n_mazes: int = 100
     samples_per_maze: int = 10
     test_size: float = 0.2
@@ -297,6 +308,7 @@ class RegressionConfig(BaseModel):
 
 
 class ClassificationConfig(BaseModel):
+    name: str = "Algorithm Recommender"
     n_mazes: int = 100
     test_size: float = 0.2
     seed: int = 42
@@ -324,6 +336,7 @@ class RegressionResult(BaseModel):
     metrics: list[RegressionMetrics]
     coefficients: Optional[dict] = None
     warnings: list[str] = []
+    explanations: list[dict[str, str]] = Field(default_factory=list)
 
 
 class ClassificationResult(BaseModel):
@@ -336,6 +349,7 @@ class ClassificationResult(BaseModel):
     feature_importances: dict
     tree_rules: str
     warnings: list[str] = []
+    explanations: list[dict[str, str]] = Field(default_factory=list)
 
 
 class MLStatus(BaseModel):
@@ -371,14 +385,19 @@ class AlgorithmMeta(BaseModel):
     optimal: bool
     complete: bool
     color: str
+    plain: Optional[str] = None
+    shape: Optional[str] = None
+    color_key: Optional[str] = None
 
 
 class MetaResponse(BaseModel):
     algorithms: list[AlgorithmMeta]
-    heuristics: list[str]
-    generators: list[str]
-    presets: list[str]
+    heuristics: list[Any]
+    generators: list[Any]
+    presets: list[Any]
     cell_types: dict
     limits: dict
     defaults: dict
+    glossary: list[dict] = Field(default_factory=list)
+    speed_levels: list[dict] = Field(default_factory=list)
 

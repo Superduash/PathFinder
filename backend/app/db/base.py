@@ -43,6 +43,11 @@ def init_db() -> None:
             session.execute(text("INSERT INTO schema_version (version, applied_at) VALUES (1, datetime('now'))"))
             session.commit()
 
+        # Mark any interrupted runs/jobs from previous server sessions
+        session.execute(text("UPDATE benchmark_runs SET status = 'interrupted' WHERE status IN ('queued', 'running')"))
+        session.execute(text("UPDATE jobs SET status = 'interrupted' WHERE status IN ('queued', 'running')"))
+        session.commit()
+
 
 @contextmanager
 def session_scope() -> Generator[Session, None, None]:

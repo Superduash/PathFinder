@@ -48,3 +48,4 @@ def update_settings(session: Session, updates: dict[str, Any]) -> dict[str, Any]
         repo.set_setting(session, key, val)
 
     return get_all_settings(session)
+

@@ -1,52 +1,126 @@
-"""ML training, status, prediction, and heuristic comparison routes."""
+"""Machine learning endpoints: learned heuristics, algorithm recommender, and model registry."""
 from __future__ import annotations
+import logging
 import numpy as np
-from fastapi import APIRouter
+from typing import Optional
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+
+from backend.app.db.base import get_db, session_scope
 from backend.app.models import (
-    RegressionConfig, ClassificationConfig, JobStatus,
-    MLStatus, Maze
+    RegressionConfig, RegressionResult,
+    ClassificationConfig, ClassificationResult,
+    JobStatus, Maze
 )
 from backend.app.jobs import job_manager
 from backend.app.ml.regression import train_regression
-from backend.app.ml.classification import train_classification
-from backend.app.ml.store import ml_store
+from backend.app.ml.classification import train_classification, CANDIDATES
 from backend.app.ml.features import extract_pair_features, extract_maze_features
+from backend.app.ml.store import ml_store
 from backend.app.maze.grid import MazeGrid
 from backend.app.search.algorithms import create_search
 from backend.app.search.reference import dijkstra_optimal_cost, compute_optimality
 from backend.app.errors import ApiError, NOT_FOUND
+from backend.app.services import models_registry
 
+logger = logging.getLogger("pathfinder.ml")
 router = APIRouter()
+
+
+def execute_and_persist_regression(job, config: RegressionConfig):
+    res = train_regression(job, config)
+    if res:
+        try:
+            with session_scope() as db_session:
+                models_registry.register_trained_model(
+                    session=db_session,
+                    kind="regression",
+                    name=config.name,
+                    model_obj=ml_store.regression_model,
+                    params=config.model_dump(),
+                    metrics=res.model_dump(),
+                    job_id=job.job_id,
+                )
+        except Exception as e:
+            logger.warning("Failed to register regression model in DB: %s", e)
+    return res
+
+
+def execute_and_persist_classification(job, config: ClassificationConfig):
+    res = train_classification(job, config)
+    if res:
+        try:
+            with session_scope() as db_session:
+                models_registry.register_trained_model(
+                    session=db_session,
+                    kind="classification",
+                    name=config.name,
+                    model_obj=ml_store.classification_model,
+                    params=config.model_dump(),
+                    metrics=res.model_dump(),
+                    job_id=job.job_id,
+                )
+        except Exception as e:
+            logger.warning("Failed to register classification model in DB: %s", e)
+    return res
 
 
 @router.post("/ml/regression/train", response_model=JobStatus)
 @router.post("/ml/regression/jobs", response_model=JobStatus)
 def api_train_regression(config: RegressionConfig) -> JobStatus:
-    job = job_manager.create("ml_regression", lambda j: train_regression(j, config))
+    job = job_manager.create("ml_regression", lambda j: execute_and_persist_regression(j, config))
     return job.to_model()
 
 
 @router.post("/ml/classification/train", response_model=JobStatus)
 @router.post("/ml/classification/jobs", response_model=JobStatus)
 def api_train_classification(config: ClassificationConfig) -> JobStatus:
-    job = job_manager.create("ml_classification", lambda j: train_classification(j, config))
+    job = job_manager.create("ml_classification", lambda j: execute_and_persist_classification(j, config))
     return job.to_model()
 
 
 @router.get("/ml/status")
-def api_ml_status() -> dict:
-    return ml_store.get_status()
+def api_ml_status(db: Session = Depends(get_db)) -> dict:
+    return models_registry.get_ml_status(db)
+
+
+@router.get("/ml/models")
+def api_list_models(
+    kind: Optional[str] = Query(None, pattern="^(regression|classification)$"),
+    db: Session = Depends(get_db),
+) -> dict:
+    return {"models": models_registry.list_models(db, kind=kind)}
+
+
+@router.post("/ml/models/{model_id}/activate")
+def api_activate_model(
+    model_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    return models_registry.activate_model(db, model_id)
+
+
+@router.delete("/ml/models/{model_id}")
+def api_delete_model(
+    model_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    return models_registry.delete_model(db, model_id)
 
 
 @router.post("/ml/regression/astar-compare")
-def api_astar_compare(payload: dict) -> dict:
+def api_astar_compare(payload: dict, db: Session = Depends(get_db)) -> dict:
     maze_data = payload.get("maze")
     model_choice = payload.get("model", "tree")  # "linear" or "tree"
     if not maze_data:
         raise ApiError("INVALID_PARAMS", "Missing maze")
 
     if not ml_store.regression_model:
-        raise ApiError(NOT_FOUND, "No regression model has been trained yet.")
+        loaded = models_registry.load_active_model(db, "regression")
+        if loaded:
+            ml_store.regression_model = loaded
+        else:
+            raise ApiError(NOT_FOUND, "No regression model has been trained yet.")
 
     model = ml_store.regression_model.get(model_choice)
     if not model:
@@ -89,8 +163,6 @@ def api_astar_compare(payload: dict) -> dict:
     learned_search.run_to_completion()
     learned_opt = compute_optimality(c_star, learned_search.path_cost)
 
-    # Count overestimations against true c_star if available
-    overestimate_count = 0
     heatmap = []
     for r in range(grid.rows):
         for c in range(grid.cols):
@@ -115,14 +187,18 @@ def api_astar_compare(payload: dict) -> dict:
 
 
 @router.post("/ml/classification/predict")
-def api_predict_winner(payload: dict) -> dict:
+def api_predict_winner(payload: dict, db: Session = Depends(get_db)) -> dict:
     maze_data = payload.get("maze")
     run_actual = payload.get("run_actual", True)
     if not maze_data:
         raise ApiError("INVALID_PARAMS", "Missing maze")
 
     if not ml_store.classification_model:
-        raise ApiError(NOT_FOUND, "No classification model has been trained yet.")
+        loaded = models_registry.load_active_model(db, "classification")
+        if loaded:
+            ml_store.classification_model = loaded
+        else:
+            raise ApiError(NOT_FOUND, "No classification model has been trained yet.")
 
     model = ml_store.classification_model
     grid = MazeGrid.from_model(Maze(**maze_data))
@@ -140,7 +216,6 @@ def api_predict_winner(payload: dict) -> dict:
 
     actual_winner = None
     if run_actual:
-        from backend.app.ml.classification import CANDIDATES
         min_exp = float("inf")
         for c in CANDIDATES:
             s = create_search(c["algorithm"], grid, heuristic=c["heuristic"])
@@ -150,9 +225,9 @@ def api_predict_winner(payload: dict) -> dict:
                 actual_winner = c["name"]
 
     return {
-        "predicted_algorithm": prediction,
+        "predicted_winner": str(prediction),
+        "confidence": round(float(np.max(probs)), 3),
         "probabilities": prob_dict,
         "actual_winner": actual_winner,
-        "is_correct": (prediction == actual_winner) if actual_winner else None,
+        "correct": (str(prediction) == str(actual_winner)) if actual_winner else None,
     }
-

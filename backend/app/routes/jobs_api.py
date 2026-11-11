@@ -1,16 +1,40 @@
 """Benchmark job endpoints, status, cancel, and CSV export."""
 from __future__ import annotations
+import logging
 from fastapi import APIRouter, Response
 from backend.app.models import BenchmarkConfig, JobStatus
 from backend.app.jobs import job_manager
 from backend.app.benchmark import run_benchmark_job, export_csv
 
+logger = logging.getLogger("pathfinder.jobs")
 router = APIRouter()
+
+
+def execute_and_persist_benchmark(job, config: BenchmarkConfig):
+    res = run_benchmark_job(job, config)
+    if res:
+        try:
+            from backend.app.db.base import session_scope
+            from backend.app.services.runs import save_benchmark_run
+            with session_scope() as db_session:
+                save_benchmark_run(
+                    session=db_session,
+                    job_id=job.job_id,
+                    config=config.model_dump(),
+                    summary=[s.model_dump() for s in res.summary],
+                    environment=res.environment.model_dump(),
+                    rows=[r.model_dump() for r in res.rows],
+                    duration_s=res.elapsed_s,
+                    status="done",
+                )
+        except Exception as e:
+            logger.warning("Failed to persist benchmark run to DB: %s", e)
+    return res
 
 
 @router.post("/benchmark/jobs", response_model=JobStatus)
 def create_benchmark_job(config: BenchmarkConfig) -> JobStatus:
-    job = job_manager.create("benchmark", lambda j: run_benchmark_job(j, config))
+    job = job_manager.create("benchmark", lambda j: execute_and_persist_benchmark(j, config))
     return job.to_model()
 
 
