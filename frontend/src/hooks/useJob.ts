@@ -12,7 +12,8 @@ export function useJob(jobId: string | null) {
       if (status === "done" || status === "error" || status === "cancelled") {
         return false;
       }
-      return 500;
+      // Poll every 300ms during active benchmark for smoother progress
+      return 300;
     },
   });
 

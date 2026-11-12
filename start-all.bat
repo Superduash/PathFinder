@@ -10,13 +10,16 @@ echo.
 cd /d "%~dp0"
 
 echo [1/3] Starting backend (FastAPI on Port 8000)...
-start "PathFinder Backend (Port 8000)" cmd /k "python run.py --no-browser"
+start "PathFinder Backend (Port 8000)" cmd /k "python run.py --reload --no-browser"
 
-echo [2/3] Starting frontend (Vite on Port 5173)...
+echo [2/3] Waiting for backend to be ready...
+timeout /t 3 /nobreak >nul
+
+echo [3/3] Starting frontend (Vite on Port 5173)...
 start "PathFinder Frontend (Port 5173)" cmd /k "cd frontend && npm run dev"
 
 echo.
-echo [3/3] Synchronizing servers...
+echo [4/4] Synchronizing servers...
 
 rem Wait for backend API to be live (prevents ECONNREFUSED on first requests)
 set /a attempts=0

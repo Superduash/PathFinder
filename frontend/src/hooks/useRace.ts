@@ -47,6 +47,8 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
   const inFlightRef = useRef(false);
   const timerRef = useRef<any>(null);
   const colsRef = useRef(maze?.cols || 21);
+  const confettiFiredRef = useRef(false);
+  const currentRaceIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (maze?.cols) colsRef.current = maze.cols;
@@ -90,6 +92,8 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
       setInsights([]);
       setStepCount(0);
       setRaceState(isRunningRef.current ? "running" : "ready");
+      // Reset confetti flag for new race
+      confettiFiredRef.current = false;
     });
 
     socket.on("race.update", (msg: any) => {
@@ -173,9 +177,6 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
         setWinnerIdx(msg.ranking[0]);
         if (msg.winner_reason) setWinnerReason(msg.winner_reason);
         if (msg.insights) setInsights(msg.insights);
-        try {
-          confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
-        } catch {}
       }
     });
 
@@ -216,12 +217,23 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
     };
   }, [raceState, pacing.intervalMs, pacing.k]);
 
+  // Fire confetti once when race finishes with a winner
+  useEffect(() => {
+    if (raceState === "finished" && winnerIdx !== null && !confettiFiredRef.current) {
+      confettiFiredRef.current = true;
+      try {
+        confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+      } catch {}
+    }
+  }, [raceState, winnerIdx]);
+
   const initRace = useCallback(() => {
     if (!maze || !socketRef.current) return;
     setWinnerIdx(null);
     setWinnerReason(null);
     setInsights([]);
     setStepCount(0);
+    confettiFiredRef.current = false; // Reset confetti flag for new race
     socketRef.current.send({
       type: "race.init",
       raceId: `race_${Date.now()}`,
@@ -268,6 +280,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
     setInsights([]);
     setStepCount(0);
     setStats([]);
+    confettiFiredRef.current = false; // Reset confetti flag
   };
 
   return {

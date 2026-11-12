@@ -265,11 +265,112 @@ export const BenchmarkPage: React.FC = () => {
                     </div>
                     <CardDescription>{progress.label || "Executing algorithm sweeps..."}</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex flex-col gap-4">
                     <Progress value={progress.total > 0 ? (progress.done / progress.total) * 100 : 0} />
                     <div className="flex justify-between text-xs text-muted mt-2 font-mono">
                       <span>Completed mazes: {progress.done} / {progress.total}</span>
                       <span>{Math.round(progress.total > 0 ? (progress.done / progress.total) * 100 : 0)}%</span>
+                    </div>
+                    {/* Estimated time remaining */}
+                    {progress.done > 0 && progress.total > 0 && (() => {
+                      const preset = PRESET_BENCHMARKS.find((p) => p.id === selectedPreset);
+                      if (!preset) return null;
+                      
+                      const percentDone = progress.done / progress.total;
+                      const timePerMaze = 0.5; // Rough estimate: 0.5 seconds per maze
+                      const mazesLeft = progress.total - progress.done;
+                      const estimatedSecondsLeft = mazesLeft * timePerMaze;
+                      const minutes = Math.floor(estimatedSecondsLeft / 60);
+                      const seconds = Math.round(estimatedSecondsLeft % 60);
+                      
+                      return (
+                        <div className="p-4 rounded-lg bg-surface-2 border border-border">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted">Estimated time remaining:</span>
+                            <span className="font-bold text-brand">
+                              {minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              )}
+
+              {(jobStatus === "queued" || jobStatus === "running") && !batchResult && (
+                <Card>
+                  <CardContent className="py-12">
+                    <div className="flex flex-col items-center justify-center gap-4 text-center">
+                      <div className="relative">
+                        <div className="w-16 h-16 border-4 border-surface-2 border-t-brand rounded-full animate-spin" />
+                        <Sparkles className="w-6 h-6 text-brand absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-text">
+                          {jobStatus === "queued" ? "Preparing benchmark..." : "Benchmark in progress"}
+                        </p>
+                        <p className="text-sm text-muted mt-1">
+                          Running algorithms across multiple maze configurations
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {jobStatus === "error" && (
+                <Card>
+                  <CardContent className="py-8">
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-danger">Benchmark Failed</p>
+                      <p className="text-sm text-muted mt-2">An error occurred during the benchmark run.</p>
+                      <Button onClick={() => setWizardStep(1)} className="mt-4">
+                        Start Over
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {jobStatus === "cancelled" && (
+                <Card>
+                  <CardContent className="py-8">
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-warn">Benchmark Cancelled</p>
+                      <p className="text-sm text-muted mt-2">The benchmark run was cancelled by user.</p>
+                      <Button onClick={() => setWizardStep(1)} className="mt-4">
+                        Start New Benchmark
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {jobStatus === "done" && batchResult?.elapsed_s && (
+                <Card>
+                  <CardContent className="py-6">
+                    <div className="flex items-center justify-center gap-4">
+                      <div className="text-center">
+                        <span className="text-xs text-muted uppercase tracking-wide block">Benchmark Completed</span>
+                        <span className="text-2xl font-bold text-brand mt-1 block">
+                          {Math.floor(batchResult.elapsed_s / 60)}m {Math.round(batchResult.elapsed_s % 60)}s
+                        </span>
+                      </div>
+                      <div className="h-12 w-px bg-border" />
+                      <div className="text-center">
+                        <span className="text-xs text-muted uppercase tracking-wide block">Total Runs</span>
+                        <span className="text-2xl font-bold text-text mt-1 block">
+                          {batchResult.dataset_size || "—"}
+                        </span>
+                      </div>
+                      <div className="h-12 w-px bg-border" />
+                      <div className="text-center">
+                        <span className="text-xs text-muted uppercase tracking-wide block">Algorithms Tested</span>
+                        <span className="text-2xl font-bold text-text mt-1 block">
+                          {participants.length}
+                        </span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -277,24 +378,62 @@ export const BenchmarkPage: React.FC = () => {
 
               {batchResult && (
                 <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-                  {/* Headline Insights */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-5 rounded-xl border border-brand/40 bg-brand/10">
-                      <span className="text-xs uppercase font-semibold text-brand tracking-wider block">Effort Champion</span>
-                      <span className="text-lg font-bold text-text mt-1 block">Fewest cells checked: A*</span>
-                      <p className="text-xs text-muted mt-1 leading-relaxed">Consistently expanded fewer nodes than BFS across all maze sizes.</p>
-                    </div>
-                    <div className="p-5 rounded-xl border border-border bg-surface">
-                      <span className="text-xs uppercase font-semibold text-success tracking-wider block">Shortest Route</span>
-                      <span className="text-lg font-bold text-text mt-1 block">100% Optimal: BFS, UCS, A*</span>
-                      <p className="text-xs text-muted mt-1 leading-relaxed">Admissible heuristics preserved optimal path lengths.</p>
-                    </div>
-                    <div className="p-5 rounded-xl border border-border bg-surface">
-                      <span className="text-xs uppercase font-semibold text-warn tracking-wider block">Runtime Speed</span>
-                      <span className="text-lg font-bold text-text mt-1 block">Fastest: Within Noise Margin</span>
-                      <p className="text-xs text-muted mt-1 leading-relaxed">Python timings were within variance bounds across iterations.</p>
-                    </div>
-                  </div>
+                  {/* Headline Insights - Generated from actual results */}
+                  {(() => {
+                    const overallSummary = batchResult.summary?.filter((s: any) => s.group === "overall") || [];
+                    if (overallSummary.length === 0) return null;
+
+                    // Find algorithm with fewest expansions
+                    const bestExpansion = overallSummary.reduce((prev: any, curr: any) => 
+                      curr.mean_expanded < prev.mean_expanded ? curr : prev
+                    );
+
+                    // Find optimal algorithms (100% optimality)
+                    const optimalAlgs = overallSummary
+                      .filter((s: any) => s.mean_optimality && s.mean_optimality >= 0.999)
+                      .map((s: any) => `${s.algorithm.toUpperCase()}${s.heuristic ? ` (${s.heuristic})` : ""}`)
+                      .join(", ");
+
+                    // Find fastest algorithm
+                    const fastestAlg = overallSummary.reduce((prev: any, curr: any) => 
+                      curr.mean_time_ms < prev.mean_time_ms ? curr : prev
+                    );
+
+                    // Count how many are within noise
+                    const withinNoiseCount = overallSummary.filter((s: any) => s.within_noise_of_best).length;
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-5 rounded-xl border border-brand/40 bg-brand/10">
+                          <span className="text-xs uppercase font-semibold text-brand tracking-wider block">Effort Champion</span>
+                          <span className="text-lg font-bold text-text mt-1 block">
+                            {bestExpansion.algorithm.toUpperCase()}{bestExpansion.heuristic ? ` (${bestExpansion.heuristic})` : ""}
+                          </span>
+                          <p className="text-xs text-muted mt-1 leading-relaxed">
+                            Average {Math.round(bestExpansion.mean_expanded)} cells expanded per maze
+                          </p>
+                        </div>
+                        <div className="p-5 rounded-xl border border-border bg-surface">
+                          <span className="text-xs uppercase font-semibold text-success tracking-wider block">Shortest Route</span>
+                          <span className="text-lg font-bold text-text mt-1 block">
+                            {optimalAlgs || "No optimal paths found"}
+                          </span>
+                          <p className="text-xs text-muted mt-1 leading-relaxed">
+                            {optimalAlgs ? "Guaranteed optimal paths (100% optimality)" : "Check algorithm configurations"}
+                          </p>
+                        </div>
+                        <div className="p-5 rounded-xl border border-border bg-surface">
+                          <span className="text-xs uppercase font-semibold text-warn tracking-wider block">Runtime Speed</span>
+                          <span className="text-lg font-bold text-text mt-1 block">
+                            {fastestAlg.algorithm.toUpperCase()}{fastestAlg.heuristic ? ` (${fastestAlg.heuristic})` : ""} - {fastestAlg.mean_time_ms.toFixed(2)}ms
+                          </span>
+                          <p className="text-xs text-muted mt-1 leading-relaxed">
+                            {withinNoiseCount > 1 ? `${withinNoiseCount} algorithms within noise margin` : "Clear performance winner"}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Chart */}
                   <Card>
