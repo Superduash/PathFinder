@@ -32,6 +32,7 @@ interface VisualizerToolbarProps {
   onOverlayModeChange: (mode: OverlayMode) => void;
   showHintMap: boolean;
   onToggleHintMap: () => void;
+  disabled?: boolean;
 }
 
 const SPEED_OPTIONS = [
@@ -44,11 +45,11 @@ const SPEED_OPTIONS = [
 ];
 
 const OVERLAY_OPTIONS: { label: string; mode: OverlayMode; title: string }[] = [
-  { label: "Off", mode: "off", title: "No numbers on cells" },
-  { label: "Order", mode: "order", title: "Order checked (1, 2, 3...)" },
-  { label: "g", mode: "g", title: "Cost from start g(n)" },
-  { label: "h", mode: "h", title: "Heuristic hint to goal h(n)" },
-  { label: "f", mode: "f", title: "Total evaluation f = g + h" },
+  { label: "Off", mode: "off", title: "Hide all cell numbers" },
+  { label: "Order", mode: "order", title: "Show check order: which cell was visited 1st, 2nd, 3rd..." },
+  { label: "g", mode: "g", title: "Cost from start: g(n) = actual distance traveled so far" },
+  { label: "h", mode: "h", title: "Heuristic estimate: h(n) = guessed remaining distance to goal" },
+  { label: "f", mode: "f", title: "Total score: f(n) = g(n) + h(n) used by A* to pick next cell" },
 ];
 
 export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
@@ -70,6 +71,7 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
   onOverlayModeChange,
   showHintMap,
   onToggleHintMap,
+  disabled = false,
 }) => {
   const isRunning = raceState === "running";
 
@@ -187,8 +189,9 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
 
         <button
           onClick={onNewMaze}
+          disabled={disabled}
           title="Re-roll maze with current generator settings"
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text text-xs font-semibold transition-colors shadow-2xs"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text text-xs font-semibold transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Dices className="w-3.5 h-3.5 text-brand" />
           <span>New maze</span>

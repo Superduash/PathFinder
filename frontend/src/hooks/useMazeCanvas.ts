@@ -46,6 +46,10 @@ export function useMazeCanvas({
   const pathAnimProgressRef = useRef(0);
   const staticCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const staticKeyRef = useRef<string>("");
+  
+  // Memoized cells signature to avoid expensive recomputation on every frame
+  const cellsSignatureRef = useRef<string>("");
+  const lastCellsArrayRef = useRef<number[] | null>(null);
 
   // Register births for newly checked cells
   useEffect(() => {
@@ -57,6 +61,19 @@ export function useMazeCanvas({
       }
     }
   }, [exploredSet]);
+  
+  // Clear animation history when maze changes
+  useEffect(() => {
+    if (!maze) return;
+    // Reset birth tracking when cells array changes
+    if (lastCellsArrayRef.current !== maze.cells) {
+      birthMapRef.current.clear();
+      pathAnimProgressRef.current = 0;
+      lastCellsArrayRef.current = maze.cells;
+      // Recompute cells signature
+      cellsSignatureRef.current = maze.cells.join('');
+    }
+  }, [maze]);
 
   // Bresenham interpolation to avoid gaps when dragging fast
   const drawLineCells = useCallback(
@@ -117,7 +134,8 @@ export function useMazeCanvas({
     const now = performance.now();
 
     // 1. Static Layer: Walls, Sand, Water, Floor (Cached to Offscreen Canvas for maximum FPS)
-    const currentKey = `${maze.rows}x${maze.cols}_${Math.round(width)}x${Math.round(height)}_${dpr}_${isDark ? 1 : 0}_${maze.cells.length}_${maze.cells[0] || 0}`;
+    // Use complete cells signature to detect any layout changes
+    const currentKey = `${maze.rows}x${maze.cols}_${Math.round(width)}x${Math.round(height)}_${dpr}_${isDark ? 1 : 0}_${cellsSignatureRef.current}`;
     if (!staticCanvasRef.current || staticKeyRef.current !== currentKey) {
       if (!staticCanvasRef.current) {
         staticCanvasRef.current = document.createElement("canvas");
@@ -392,7 +410,10 @@ export function useMazeCanvas({
     if (hoverCell) {
       const [hr, hc] = hoverCell;
       if (hr >= 0 && hr < maze.rows && hc >= 0 && hc < maze.cols) {
-        ctx.strokeStyle = "var(--brand)";
+        // Resolve CSS variable to actual color
+        const brandColor = getComputedStyle(document.documentElement)
+          .getPropertyValue('--brand').trim() || "#2DD4BF";
+        ctx.strokeStyle = brandColor;
         ctx.lineWidth = 2;
         ctx.strokeRect(hc * cellW + 1, hr * cellH + 1, cellW - 2, cellH - 2);
       }

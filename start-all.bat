@@ -1,7 +1,7 @@
 @echo off
 setlocal
-title PathFinder — Launcher
 
+title PathFinder — Launcher
 echo =======================================================
 echo          PathFinder — Full Stack Launcher
 echo =======================================================

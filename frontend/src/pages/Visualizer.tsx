@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAppStore } from "@/store/useAppStore";
 import { useRace } from "@/hooks/useRace";
@@ -34,6 +34,8 @@ export const VisualizerPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"edit" | "race">("race");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const generationIdRef = useRef(0);
 
   // Overlay Mode and Heuristic Map state (§4.3)
   const [overlayMode, setOverlayMode] = useState<OverlayMode>("off");
@@ -127,6 +129,11 @@ export const VisualizerPage: React.FC = () => {
 
   // Generate maze from config
   const handleGenerate = async (cfg: MazeConfig, suppressToast: boolean = false) => {
+    if (isGenerating) return; // Prevent concurrent requests
+    
+    setIsGenerating(true);
+    const requestId = ++generationIdRef.current;
+    
     try {
       const generated = await request<Maze>("/api/maze/generate", {
         method: "POST",
@@ -142,22 +149,65 @@ export const VisualizerPage: React.FC = () => {
           randomize_endpoints: true,
         }),
       });
+      
+      // Ignore stale responses
+      if (requestId !== generationIdRef.current) {
+        return;
+      }
+      
       setMaze(generated);
       resetRace();
       setActivePreset(null);
-      if (!suppressToast) {
-        notify.success(`Maze ${cfg.rows}×${cfg.cols} generated (${cfg.genType})`);
+      
+      // Update config with actual seed from generated maze if available
+      if (generated.seed !== undefined && generated.seed !== cfg.seed) {
+        setMazeConfig(prev => ({ ...prev, seed: generated.seed }));
+      }
+      
+      // Validate solvability and warn user
+      try {
+        const validation = await request<{ valid: boolean; solvable: boolean }>("/api/maze/validate", {
+          method: "POST",
+          body: JSON.stringify({ maze: generated }),
+        });
+        
+        if (!validation.solvable && !suppressToast) {
+          notify.warning("⚠️ No path exists! Try: lower density, different seed, or click 'New maze'");
+        } else if (!suppressToast) {
+          if (cfg.genType === "empty") {
+            notify.info(`Empty ${cfg.rows}×${cfg.cols} grid (no obstacles)`);
+          } else {
+            notify.success(`Maze ${cfg.rows}×${cfg.cols} generated (${cfg.genType})`);
+          }
+        }
+      } catch {
+        // Validation failed, still show generated maze
+        if (!suppressToast) {
+          notify.success(`Maze ${cfg.rows}×${cfg.cols} generated (${cfg.genType})`);
+        }
       }
     } catch (err) {
       notify.error(err);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  // 1-click re-roll with randomized seed
+  // 1-click re-roll: generates new maze with different seed, keeping all other settings
   const handleNewMaze = () => {
-    const newSeed = Math.floor(Math.random() * 900000) + 100000;
-    const nextCfg = { ...mazeConfig, seed: newSeed };
+    // Generate guaranteed different seed
+    let newSeed;
+    do {
+      newSeed = Math.floor(Math.random() * 900000) + 100000;
+    } while (newSeed === mazeConfig.seed);
+    
+    const nextCfg = { 
+      ...mazeConfig, 
+      seed: newSeed
+    };
+    
     setMazeConfig(nextCfg);
+    setActivePreset(null); // Leave preset mode when generating
     handleGenerate(nextCfg);
   };
 
@@ -305,6 +355,7 @@ export const VisualizerPage: React.FC = () => {
         onOverlayModeChange={setOverlayMode}
         showHintMap={showHintMap}
         onToggleHintMap={() => setShowHintMap((v) => !v)}
+        disabled={isGenerating}
       />
 
       {/* Narrator Banner (§5.4) */}

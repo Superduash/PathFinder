@@ -21,6 +21,8 @@ class HeuristicMapRequest(BaseModel):
 
 @router.post("/maze/generate", response_model=Maze)
 def api_generate_maze(req: GenerateMazeRequest) -> Maze:
+    from backend.app.maze.generators import ensure_solvable
+    
     grid = generate(
         type=req.type,
         rows=req.rows,
@@ -32,6 +34,28 @@ def api_generate_maze(req: GenerateMazeRequest) -> Maze:
         seed=req.seed,
         randomize_endpoints_flag=req.randomize_endpoints,
     )
+    
+    # Auto-ensure solvability for high-density random mazes
+    # Random mazes with density > 0.4 are often unsolvable
+    if req.type == "random" and req.density > 0.4:
+        from backend.app.search.reference import is_reachable
+        if not is_reachable(grid):
+            grid = ensure_solvable(
+                maze=grid,
+                base_seed=req.seed or 42,
+                gen_fn=generate,
+                gen_kwargs={
+                    "type": req.type,
+                    "rows": req.rows,
+                    "cols": req.cols,
+                    "density": req.density,
+                    "weighted": req.weighted,
+                    "weight_fraction": req.weight_fraction,
+                    "diagonal": req.diagonal,
+                    "randomize_endpoints_flag": req.randomize_endpoints,
+                },
+            )
+    
     return Maze(**grid.to_dict())
 
 

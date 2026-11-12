@@ -223,14 +223,58 @@ def export_csv(result_dict: dict, table: str = "summary") -> str:
         summary_rows = result_dict.get("summary", [])
         if summary_rows:
             headers = list(summary_rows[0].keys())
+            
+            # Add descriptive comment row at the top
+            descriptions = {
+                "algorithm": "Search algorithm name",
+                "heuristic": "Heuristic function used (if any)",
+                "group": "Grouping category (overall or by maze size)",
+                "n_mazes": "Number of mazes tested",
+                "n_found": "Number of mazes where path was found",
+                "mean_expanded": "Average number of cells explored",
+                "std_expanded": "Standard deviation of cells explored",
+                "mean_time_ms": "Average execution time in milliseconds",
+                "std_time_ms": "Standard deviation of execution time",
+                "mean_optimality": "Average optimality ratio (1.0 = perfect)",
+                "within_noise_of_best": "Whether performance is statistically similar to best"
+            }
+            
+            # Write description row
+            writer.writerow([f"# {descriptions.get(h, h)}" for h in headers])
+            # Write header row
             writer.writerow(headers)
+            # Write data rows
             for r in summary_rows:
                 writer.writerow([r.get(h) for h in headers])
     elif table == "rows":
         rows = result_dict.get("rows", [])
         if rows:
             headers = list(rows[0].keys())
+            
+            # Add descriptive comment row
+            descriptions = {
+                "config_index": "Configuration number",
+                "maze_index": "Maze number within this config",
+                "rows": "Maze height (rows)",
+                "cols": "Maze width (columns)",
+                "density": "Wall density (0.0-1.0)",
+                "type": "Generator type (backtracker/random/etc)",
+                "seed": "Random seed for reproducibility",
+                "algorithm": "Search algorithm name",
+                "heuristic": "Heuristic function (if applicable)",
+                "status": "Result status (found/failed)",
+                "expanded_count": "Number of cells explored",
+                "path_length": "Number of steps in solution path",
+                "path_cost": "Total cost of solution path",
+                "optimality": "Optimality ratio (1.0 = optimal)",
+                "timing_ms": "Median execution time in milliseconds"
+            }
+            
+            # Write description row
+            writer.writerow([f"# {descriptions.get(h, h)}" for h in headers])
+            # Write header row
             writer.writerow(headers)
+            # Write data rows
             for r in rows:
                 writer.writerow([r.get(h) for h in headers])
 

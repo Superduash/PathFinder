@@ -28,6 +28,7 @@ export const NarratorBar: React.FC<NarratorBarProps> = ({
         <div className="flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-brand" />
           <span>Select algorithms, draw walls or terrain, and start racing.</span>
+          <span className="hidden md:inline text-muted/70">• Use "Show" dropdown to display algorithm values on cells (g, h, f).</span>
         </div>
         <span className="font-mono text-[11px] text-muted/80">Press Space to start</span>
       </div>

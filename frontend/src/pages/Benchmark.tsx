@@ -24,9 +24,9 @@ import { useBenchmarkRunsQuery } from "@/lib/queries";
 import type { CompareResult, BenchmarkConfig } from "@/lib/types";
 
 const PRESET_BENCHMARKS = [
-  { id: "quick", name: "Quick Test", desc: "≈10 seconds · 2 sizes × 2 mazes", sizes: [{ rows: 15, cols: 15 }, { rows: 21, cols: 21 }], count: 2, repeats: 1 },
-  { id: "standard", name: "Standard", desc: "≈1 minute · 3 sizes × 4 mazes", sizes: [{ rows: 15, cols: 15 }, { rows: 25, cols: 25 }, { rows: 35, cols: 35 }], count: 4, repeats: 2 },
-  { id: "thorough", name: "Thorough", desc: "≈3 minutes · 4 sizes × 6 mazes", sizes: [{ rows: 15, cols: 15 }, { rows: 25, cols: 25 }, { rows: 35, cols: 35 }, { rows: 45, cols: 45 }], count: 6, repeats: 3 },
+  { id: "quick", name: "Quick Test", desc: "2 sizes × 2 mazes each", sizes: [{ rows: 15, cols: 15 }, { rows: 21, cols: 21 }], count: 2, repeats: 1 },
+  { id: "standard", name: "Standard", desc: "3 sizes × 4 mazes each", sizes: [{ rows: 15, cols: 15 }, { rows: 25, cols: 25 }, { rows: 35, cols: 35 }], count: 4, repeats: 2 },
+  { id: "thorough", name: "Thorough", desc: "4 sizes × 6 mazes each", sizes: [{ rows: 15, cols: 15 }, { rows: 25, cols: 25 }, { rows: 35, cols: 35 }, { rows: 45, cols: 45 }], count: 6, repeats: 3 },
 ];
 
 export const BenchmarkPage: React.FC = () => {
@@ -271,29 +271,6 @@ export const BenchmarkPage: React.FC = () => {
                       <span>Completed mazes: {progress.done} / {progress.total}</span>
                       <span>{Math.round(progress.total > 0 ? (progress.done / progress.total) * 100 : 0)}%</span>
                     </div>
-                    {/* Estimated time remaining */}
-                    {progress.done > 0 && progress.total > 0 && (() => {
-                      const preset = PRESET_BENCHMARKS.find((p) => p.id === selectedPreset);
-                      if (!preset) return null;
-                      
-                      const percentDone = progress.done / progress.total;
-                      const timePerMaze = 0.5; // Rough estimate: 0.5 seconds per maze
-                      const mazesLeft = progress.total - progress.done;
-                      const estimatedSecondsLeft = mazesLeft * timePerMaze;
-                      const minutes = Math.floor(estimatedSecondsLeft / 60);
-                      const seconds = Math.round(estimatedSecondsLeft % 60);
-                      
-                      return (
-                        <div className="p-4 rounded-lg bg-surface-2 border border-border">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted">Estimated time remaining:</span>
-                            <span className="font-bold text-brand">
-                              {minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })()}
                   </CardContent>
                 </Card>
               )}
