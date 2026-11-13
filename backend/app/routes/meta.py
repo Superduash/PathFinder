@@ -2,7 +2,7 @@
 from __future__ import annotations
 from fastapi import APIRouter, Response
 from backend.app.models import MetaResponse, AlgorithmMeta
-from backend.app.maze.presets import PRESETS
+from backend.app.maze.presets import PRESETS, get_preset_list
 from backend.app.maze.generators import GENERATORS
 
 router = APIRouter()
@@ -269,12 +269,13 @@ SPEED_LEVELS = [
 
 @router.get("/meta", response_model=MetaResponse)
 def get_meta(response: Response) -> MetaResponse:
+    """Phase 2.5: Include preset metadata."""
     response.headers["Cache-Control"] = "public, max-age=300"
     return MetaResponse(
         algorithms=ALGORITHMS_INFO,
         heuristics=HEURISTICS_INFO,
         generators=list(GENERATORS.keys()),
-        presets=PRESET_CARDS,
+        presets=get_preset_list(),  # Phase 2.5: Use new metadata
         cell_types={
             "0": {"name": "open", "cost": 1.0, "color": "#0E1116"},
             "1": {"name": "wall", "cost": None, "color": "#2A323D"},

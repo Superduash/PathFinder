@@ -48,7 +48,6 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
   const timerRef = useRef<any>(null);
   const colsRef = useRef(maze?.cols || 21);
   const confettiFiredRef = useRef(false);
-  const currentRaceIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (maze?.cols) colsRef.current = maze.cols;

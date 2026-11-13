@@ -55,7 +55,10 @@ class Search:
         if self.kind in ("bfs", "dfs"):
             self.waiting = deque([self.start])
         else:
-            self.waiting = [(self.score(self.start), next(self.tiebreak), self.start)]
+            self.waiting = [(self.score(self.start), self._h(self.start), next(self.tiebreak), self.start)]
+
+        # Phase 1.3: Frontier bookkeeping with open_cells set (B3)
+        self.open_cells: set[tuple[int, int]] = {self.start}
 
         # Tracking metrics
         self.status: str = "init"        # "init" | "running" | "found" | "failed"
@@ -69,12 +72,21 @@ class Search:
         self.path_length: Optional[int] = None
 
         self.trace: list[tuple[int, int]] = []
-        self.delta_expanded: list[tuple[int, int]] = []
-        self.delta_discovered: list[tuple[int, int]] = []
+        self.delta_expanded: list[tuple[int, int]] = []  # Phase 1.3: already list (B4)
+        self.delta_discovered: list[tuple[int, int]] = []  # Phase 1.3: already list (B4)
+
+        # Phase 1.4: Per-cell order (B1)
+        self.order: dict[tuple[int, int], int] = {}
+
+    def _h(self, cell: tuple[int, int]) -> float:
+        """Heuristic value for tie-breaking (Phase 1.1)."""
+        if self.h_fn:
+            return self.h_fn(cell[0], cell[1], self.goal[0], self.goal[1])
+        return 0.0
 
     def score(self, cell: tuple[int, int]) -> float:
         g = self.g_costs.get(cell, 0.0)
-        h = self.h_fn(cell[0], cell[1], self.goal[0], self.goal[1]) if self.h_fn else 0.0
+        h = self._h(cell)
         if self.kind == "ucs":
             return g
         elif self.kind == "greedy":
@@ -89,27 +101,34 @@ class Search:
         elif self.kind == "dfs":
             self.waiting.append(cell)
         else:
-            heapq.heappush(self.waiting, (self.score(cell), next(self.tiebreak), cell))
+            # Heap entries: (priority, tie_h, counter, cell) for Phase 1.1
+            heapq.heappush(self.waiting, (self.score(cell), self._h(cell), next(self.tiebreak), cell))
+        # Phase 1.3: Track open cells (B3)
+        self.open_cells.add(cell)
 
     def pop(self) -> Optional[tuple[int, int]]:
         if self.kind == "bfs":
-            return self.waiting.popleft() if self.waiting else None
+            cell = self.waiting.popleft() if self.waiting else None
         elif self.kind == "dfs":
-            return self.waiting.pop() if self.waiting else None
+            cell = self.waiting.pop() if self.waiting else None
         else:
+            cell = None
             while self.waiting:
-                _, _, cell = heapq.heappop(self.waiting)
+                _, _, _, c = heapq.heappop(self.waiting)
                 # If cell is already expanded/closed, skip it (B3 fix)
-                if cell not in self.closed:
-                    return cell
-            return None
+                if c not in self.closed:
+                    cell = c
+                    break
+        
+        # Phase 1.3: Remove from open_cells when popped (B3)
+        if cell:
+            self.open_cells.discard(cell)
+        return cell
 
     @property
     def frontier_count(self) -> int:
-        if self.kind in ("bfs", "dfs"):
-            return len(self.waiting)
-        # Distinct unexpanded cells in priority queue
-        return len(set(item[2] for item in self.waiting if item[2] not in self.closed))
+        # Phase 1.3: O(1) frontier count (B3)
+        return len(self.open_cells)
 
     def step(self) -> bool:
         if self.status == "init":
@@ -132,6 +151,9 @@ class Search:
         self.expanded_count += 1
         self.trace.append(curr)
         self.delta_expanded.append(curr)
+        
+        # Phase 1.4: Record expansion order (B1)
+        self.order[curr] = self.expanded_count
 
         # Goal test upon expansion
         if curr == self.goal:
@@ -156,8 +178,15 @@ class Search:
                     self.g_costs[nb] = new_g
                     self.push(nb)
                     self.delta_discovered.append(nb)
+            elif self.kind == "greedy":
+                # Phase 1.2: Greedy keeps first discovery (F7 fix)
+                if nb not in self.g_costs:
+                    self.g_costs[nb] = new_g
+                    self.parent[nb] = curr
+                    self.push(nb)
+                    self.delta_discovered.append(nb)
             else:
-                # UCS / Greedy / A*: update if new route is strictly cheaper
+                # UCS / A*: update if new route is strictly cheaper
                 if nb not in self.g_costs or new_g < self.g_costs[nb]:
                     is_new = nb not in self.g_costs
                     self.g_costs[nb] = new_g

@@ -194,8 +194,8 @@ export const VisualizerPage: React.FC = () => {
       setActivePreset(null);
       
       // Update config with actual seed from generated maze if available
-      if (generated.seed !== undefined && generated.seed !== cfg.seed) {
-        setMazeConfig(prev => ({ ...prev, seed: generated.seed }));
+      if (generated.seed !== undefined && generated.seed !== null && generated.seed !== cfg.seed) {
+        setMazeConfig(prev => ({ ...prev, seed: generated.seed! }));
       }
       
       // Validate solvability and warn user

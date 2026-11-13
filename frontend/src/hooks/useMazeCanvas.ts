@@ -224,6 +224,7 @@ export function useMazeCanvas({
     }
 
     // 4. Checked Cells (Explored): Single Algorithm Hue at ~22% alpha with cell fade-in
+    // For BDS: use different colors for forward/backward waves
     if (exploredSet && exploredSet.size > 0) {
       for (const key of exploredSet) {
         const [r, c] = key.split(",").map(Number);
@@ -233,11 +234,22 @@ export function useMazeCanvas({
         const age = now - birth;
         const fadeProgress = Math.min(1, age / 220); // 220 ms fade in
 
+        // Check if this cell is from backward wave (BDS)
+        const cellInfo = cellInfoMap?.get(key);
+        const side = cellInfo?.side;
+        
         // Recency heat (comet tail for newest cells)
         const isRecent = age < 300;
         const alpha = isRecent ? 0.35 : 0.22 * fadeProgress;
 
-        ctx.fillStyle = algorithmColor;
+        // Use complementary color for backward wave
+        let fillColor = algorithmColor;
+        if (side === "backward") {
+          // For BDS backward wave, use orange/amber instead of the algorithm color
+          fillColor = "#FB923C"; // Tailwind orange-400
+        }
+
+        ctx.fillStyle = fillColor;
         ctx.globalAlpha = alpha;
         ctx.beginPath();
         const inset = 1;
@@ -248,14 +260,25 @@ export function useMazeCanvas({
     }
 
     // 5. Waiting Cells (Frontier): 2px Ring Only, Algorithm Hue, NO Fill
+    // For BDS: use different colors for forward/backward wave frontiers
     if (frontierSet && frontierSet.size > 0) {
-      ctx.strokeStyle = algorithmColor;
       ctx.lineWidth = 1.75;
       for (const key of frontierSet) {
         const [r, c] = key.split(",").map(Number);
         const x = c * cellW;
         const y = r * cellH;
         const inset = 2;
+        
+        // Check if this frontier cell is from backward wave
+        const cellInfo = cellInfoMap?.get(key);
+        const side = cellInfo?.side;
+        
+        if (side === "backward") {
+          ctx.strokeStyle = "#FB923C"; // Orange-400 for backward wave
+        } else {
+          ctx.strokeStyle = algorithmColor;
+        }
+        
         ctx.strokeRect(x + inset, y + inset, cellW - inset * 2, cellH - inset * 2);
       }
     }

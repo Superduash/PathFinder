@@ -33,6 +33,10 @@ class BidirectionalSearch:
         self.best_moves: float = float("inf")
         self.meeting_cell: Optional[tuple[int, int]] = None
 
+        # Phase 1.5: Two-sided state for proper visualization
+        self.currents: dict[str, Optional[tuple[int, int]]] = {"forward": None, "backward": None}
+        self.last_cells: tuple[Optional[tuple[int, int]], Optional[tuple[int, int]]] = (None, None)
+
         # Tracking metrics
         self.status: str = "init"
         self.reason: Optional[str] = None
@@ -48,6 +52,9 @@ class BidirectionalSearch:
         self.delta_expanded: list[tuple[int, int]] = []
         self.delta_discovered: list[tuple[int, int]] = []
         self.cell_sides: dict[tuple[int, int], str] = {}
+        
+        # Phase 1.4-style order tracking for BDS
+        self.order: dict[tuple[int, int], int] = {}
 
     @property
     def frontier_count(self) -> int:
@@ -70,6 +77,7 @@ class BidirectionalSearch:
         self.delta_discovered = []
 
         # Alternate side: if forward empty, try backward; if backward empty, try forward
+        prev_side = self.current_side
         if self.current_side == "forward":
             if not self.queue_f and self.queue_b:
                 self.current_side = "backward"
@@ -101,8 +109,20 @@ class BidirectionalSearch:
         self.trace.append(curr)
         self.delta_expanded.append(curr)
         self.cell_sides[curr] = "forward" if is_forward else "backward"
+        
+        # Phase 1.5: Track current cell for each side
+        self.currents["forward" if is_forward else "backward"] = curr
+        self.last_cells = (self.currents["forward"], self.currents["backward"])
+        
+        # Phase 1.4-style order tracking (B1)
+        self.order[curr] = self.expanded_count
 
         curr_dist = dist_this[curr]
+
+        # Check if waves just met
+        just_met = False
+        if curr in parent_other and self.meeting_cell is None:
+            just_met = True
 
         # Check termination condition: if both frontiers have advanced past the best connection
         front_f = self.dist_f.get(self.queue_f[0], curr_dist) if self.queue_f else curr_dist
@@ -131,6 +151,9 @@ class BidirectionalSearch:
                     if total_m < self.best_moves:
                         self.best_moves = total_m
                         self.meeting_cell = nb
+                        # Store that this is the meeting point for special visualization
+                        if not hasattr(self, 'meeting_tick'):
+                            self.meeting_tick = self.expanded_count
 
         # Alternate side for next tick
         self.current_side = "backward" if is_forward else "forward"
@@ -166,6 +189,10 @@ class BidirectionalSearch:
                 break
             self.step()
         return self
+
+    def side_of(self, cell: tuple[int, int]) -> Optional[str]:
+        """Phase 1.5: Return which side ('forward' or 'backward') a cell belongs to."""
+        return self.cell_sides.get(cell)
 
     def _reconstruct_bds_path(self) -> None:
         if not self.meeting_cell:

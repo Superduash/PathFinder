@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { request } from "@/lib/api";
+import { 
+  BookOpen, 
+  Circle, 
+  Triangle, 
+  Square, 
+  Diamond, 
+  Star, 
+  Hexagon,
+  Map
+} from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -344,8 +354,8 @@ function GlossarySection() {
 const LESSONS = [
   {
     id: "overview",
-    title: "🗺 What is PathFinder?",
-    icon: "🗺",
+    title: "What is PathFinder?",
+    icon: Map,
     content: (
       <div className="flex flex-col gap-4 text-sm text-muted leading-relaxed">
         <p>
@@ -374,8 +384,8 @@ const LESSONS = [
   },
   {
     id: "bfs",
-    title: "● BFS — Breadth-First Search",
-    icon: "●",
+    title: "BFS — Breadth-First Search",
+    icon: Circle,
     content: (
       <div className="flex flex-col gap-4 text-sm text-muted leading-relaxed">
         <p>
@@ -411,8 +421,8 @@ const LESSONS = [
   },
   {
     id: "dfs",
-    title: "▲ DFS — Depth-First Search",
-    icon: "▲",
+    title: "DFS — Depth-First Search",
+    icon: Triangle,
     content: (
       <div className="flex flex-col gap-4 text-sm text-muted leading-relaxed">
         <p>
@@ -445,8 +455,8 @@ const LESSONS = [
   },
   {
     id: "ucs",
-    title: "■ UCS — Uniform-Cost Search",
-    icon: "■",
+    title: "UCS — Uniform-Cost Search",
+    icon: Square,
     content: (
       <div className="flex flex-col gap-4 text-sm text-muted leading-relaxed">
         <p>
@@ -480,8 +490,8 @@ const LESSONS = [
   },
   {
     id: "greedy",
-    title: "◆ Greedy Best-First Search",
-    icon: "◆",
+    title: "Greedy Best-First Search",
+    icon: Diamond,
     content: (
       <div className="flex flex-col gap-4 text-sm text-muted leading-relaxed">
         <p>
@@ -515,8 +525,8 @@ const LESSONS = [
   },
   {
     id: "astar",
-    title: "★ A* Search",
-    icon: "★",
+    title: "A* Search",
+    icon: Star,
     content: (
       <div className="flex flex-col gap-4 text-sm text-muted leading-relaxed">
         <p>
@@ -559,8 +569,8 @@ const LESSONS = [
   },
   {
     id: "bds",
-    title: "⬡ BDS — Bidirectional Search",
-    icon: "⬡",
+    title: "BDS — Bidirectional Search",
+    icon: Hexagon,
     content: (
       <div className="flex flex-col gap-4 text-sm text-muted leading-relaxed">
         <p>
@@ -599,8 +609,8 @@ const LESSONS = [
   },
   {
     id: "glossary",
-    title: "📖 Glossary",
-    icon: "📖",
+    title: "Glossary",
+    icon: BookOpen,
     content: <GlossarySection />,
   },
 ];
@@ -619,19 +629,27 @@ export const LearnPage: React.FC = () => {
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted px-2 pb-1">
             Learn
           </h2>
-          {LESSONS.map((l) => (
-            <button
-              key={l.id}
-              onClick={() => setActiveLesson(l.id)}
-              className={`text-left px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                activeLesson === l.id
-                  ? "bg-brand text-brand-ink font-bold"
-                  : "text-muted hover:text-text hover:bg-surface-2"
-              }`}
-            >
-              {l.title}
-            </button>
-          ))}
+          {LESSONS.map((l) => {
+            const IconComponent = l.icon;
+            return (
+              <button
+                key={l.id}
+                onClick={() => setActiveLesson(l.id)}
+                className={`text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-2 ${
+                  activeLesson === l.id
+                    ? "bg-brand text-brand-ink font-bold"
+                    : "text-muted hover:text-text hover:bg-surface-2"
+                }`}
+              >
+                {typeof IconComponent === 'string' ? (
+                  <span className="text-sm">{IconComponent}</span>
+                ) : (
+                  <IconComponent className="w-4 h-4 flex-shrink-0" />
+                )}
+                <span>{l.title}</span>
+              </button>
+            );
+          })}
         </div>
       </aside>
 
@@ -639,9 +657,13 @@ export const LearnPage: React.FC = () => {
       <main className="flex-1 min-w-0">
         <div className="flex flex-col gap-5">
           <div className="flex items-center gap-3 pb-3 border-b border-border">
-            <span className="text-3xl" aria-hidden>
-              {lesson.icon}
-            </span>
+            {typeof lesson.icon === 'string' ? (
+              <span className="text-3xl" aria-hidden>
+                {lesson.icon}
+              </span>
+            ) : (
+              <lesson.icon className="w-8 h-8 text-brand" />
+            )}
             <h1 className="text-xl font-bold text-text tracking-tight">{lesson.title}</h1>
           </div>
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">

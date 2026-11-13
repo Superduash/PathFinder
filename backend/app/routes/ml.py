@@ -158,7 +158,8 @@ def api_astar_compare(payload: dict, db: Session = Depends(get_db)) -> dict:
         def __init__(self, m):
             super().__init__(m, kind="astar", heuristic="zero")
             self.h_fn = lambda r, c, gr, gc: h_table.get((r, c), 0.0)
-            self.waiting = [(self.score(self.start), next(self.tiebreak), self.start)]
+            # 4-tuple: (priority, tie_h, counter, cell) — matches Phase 1.1 heap format
+            self.waiting = [(self.score(self.start), self._h(self.start), next(self.tiebreak), self.start)]
 
     learned_search = LearnedAStar(grid)
     learned_search.run_to_completion()
@@ -170,6 +171,17 @@ def api_astar_compare(payload: dict, db: Session = Depends(get_db)) -> dict:
             if grid.cell(r, c) != 1:
                 h_val = h_table.get((r, c), 0.0)
                 heatmap.append({"r": r, "c": c, "h": round(h_val, 2)})
+
+    warnings = []
+    if learned_opt is not None and learned_opt < 0.999:
+        warnings.append(f"⚠️ Learned heuristic produced suboptimal path (optimality: {learned_opt:.1%})")
+    elif learned_search.path_cost and std_astar.path_cost and learned_search.path_cost > std_astar.path_cost:
+        warnings.append("⚠️ Learned heuristic found more expensive path than Manhattan A*")
+    
+    if learned_search.expanded_count < std_astar.expanded_count:
+        warnings.append(f"✓ Learned heuristic checked {std_astar.expanded_count - learned_search.expanded_count} fewer cells")
+    elif learned_search.expanded_count > std_astar.expanded_count:
+        warnings.append(f"⚠️ Learned heuristic checked {learned_search.expanded_count - std_astar.expanded_count} MORE cells")
 
     return {
         "standard_astar": {
@@ -183,7 +195,7 @@ def api_astar_compare(payload: dict, db: Session = Depends(get_db)) -> dict:
             "optimality": learned_opt,
         },
         "heatmap": heatmap,
-        "warning": "Learned heuristics may overestimate cost and lose optimality.",
+        "warnings": warnings,
     }
 
 
@@ -216,6 +228,8 @@ def api_predict_winner(payload: dict, db: Session = Depends(get_db)) -> dict:
     }
 
     actual_winner = None
+    is_correct = None
+    
     if run_actual:
         min_exp = float("inf")
         for c in CANDIDATES:
@@ -224,11 +238,13 @@ def api_predict_winner(payload: dict, db: Session = Depends(get_db)) -> dict:
             if s.status == "found" and s.expanded_count < min_exp:
                 min_exp = s.expanded_count
                 actual_winner = c["name"]
+        
+        is_correct = (str(prediction) == str(actual_winner)) if actual_winner else None
 
     return {
-        "predicted_winner": str(prediction),
+        "predicted_algorithm": str(prediction),
         "confidence": round(float(np.max(probs)), 3),
         "probabilities": prob_dict,
         "actual_winner": actual_winner,
-        "correct": (str(prediction) == str(actual_winner)) if actual_winner else None,
+        "is_correct": is_correct,
     }

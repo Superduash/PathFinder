@@ -69,8 +69,13 @@ export const MLLabPage: React.FC = () => {
     try {
       await request(`/api/ml/models/${id}/activate`, { method: "POST" });
       notify.success(`Activated model #${id}`);
-      loadModels();
-      loadStatus();
+      await loadModels();
+      await loadStatus();
+      // Clear cached results to force fresh predictions with new model
+      setRegResult(null);
+      setClsResult(null);
+      setPredictResult(null);
+      setAstarCompareResult(null);
     } catch (err) {
       notify.error(err);
     }
@@ -263,12 +268,24 @@ export const MLLabPage: React.FC = () => {
               <CardContent className="flex flex-col gap-6">
                 {regResult ? (
                   <div className="flex flex-col gap-6">
+                    {/* Explanation of what we're measuring */}
+                    <div className="p-4 rounded-lg border border-brand/30 bg-brand/5 text-sm">
+                      <p className="text-text font-medium">What these metrics mean:</p>
+                      <ul className="text-muted text-xs mt-2 space-y-1 list-disc list-inside">
+                        <li><strong>MAE (Mean Absolute Error):</strong> Average cells off from true distance</li>
+                        <li><strong>Overestimate %:</strong> How often model guesses too high (breaks A* optimality)</li>
+                        <li><strong className="text-warn">Goal:</strong> Lower MAE = better, Lower overestimate = safer for A*</li>
+                      </ul>
+                    </div>
+
                     <div className="grid grid-cols-3 gap-3">
                       {regResult.metrics.map((m: any, idx: number) => (
                         <div key={idx} className="p-4 rounded-xl border border-border bg-surface-2 flex flex-col gap-1">
                           <span className="text-xs text-muted block">{m.model}</span>
                           <span className="text-xl font-bold text-text tabular-nums">{m.mae} MAE</span>
-                          <span className="text-[11px] text-warn tabular-nums mt-1 font-mono">
+                          <span className={`text-[11px] tabular-nums mt-1 font-mono ${
+                            m.overestimate_pct > 5 ? 'text-warn font-bold' : 'text-muted'
+                          }`}>
                             {m.overestimate_pct}% overestimates
                           </span>
                         </div>
@@ -300,21 +317,39 @@ export const MLLabPage: React.FC = () => {
                       </div>
 
                       {astarCompareResult && (
-                        <div className="grid grid-cols-2 gap-3 pt-2 text-xs font-mono">
-                          <div className="p-3 rounded-lg border border-border bg-surface">
-                            <span className="text-muted block text-[10px]">STANDARD A* (MANHATTAN)</span>
-                            <div className="text-sm font-bold text-text mt-1">
-                              Checked: {astarCompareResult.standard_astar.expanded}
+                        <div className="flex flex-col gap-3 pt-2">
+                          <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                            <div className="p-3 rounded-lg border border-border bg-surface">
+                              <span className="text-muted block text-[10px]">STANDARD A* (MANHATTAN)</span>
+                              <div className="text-sm font-bold text-text mt-1">
+                                Checked: {astarCompareResult.standard_astar.expanded}
+                              </div>
+                              <div className="text-text mt-0.5">Cost: {astarCompareResult.standard_astar.cost}</div>
+                              <div className="text-muted mt-0.5 text-[10px]">Optimality: {Math.round((astarCompareResult.standard_astar.optimality || 1) * 100)}%</div>
                             </div>
-                            <div className="text-text mt-0.5">Cost: {astarCompareResult.standard_astar.cost}</div>
-                          </div>
-                          <div className="p-3 rounded-lg border border-brand/40 bg-brand/10">
-                            <span className="text-brand block text-[10px]">LEARNED HEURISTIC A*</span>
-                            <div className="text-sm font-bold text-brand mt-1">
-                              Checked: {astarCompareResult.learned_astar.expanded}
+                            <div className="p-3 rounded-lg border border-brand/40 bg-brand/10">
+                              <span className="text-brand block text-[10px]">LEARNED HEURISTIC A*</span>
+                              <div className="text-sm font-bold text-brand mt-1">
+                                Checked: {astarCompareResult.learned_astar.expanded}
+                              </div>
+                              <div className="text-text mt-0.5">Cost: {astarCompareResult.learned_astar.cost}</div>
+                              <div className={`mt-0.5 text-[10px] font-semibold ${
+                                (astarCompareResult.learned_astar.optimality || 0) >= 0.999 ? 'text-success' : 'text-warn'
+                              }`}>
+                                Optimality: {Math.round((astarCompareResult.learned_astar.optimality || 0) * 100)}%
+                              </div>
                             </div>
-                            <div className="text-text mt-0.5">Cost: {astarCompareResult.learned_astar.cost}</div>
                           </div>
+                          
+                          {astarCompareResult.warnings && astarCompareResult.warnings.length > 0 && (
+                            <div className="flex flex-col gap-1.5 p-3 rounded-lg border border-border bg-surface-2/60">
+                              {astarCompareResult.warnings.map((w: string, idx: number) => (
+                                <div key={idx} className="flex items-start gap-2 text-xs">
+                                  <span className={w.startsWith('⚠️') ? 'text-warn' : 'text-success'}>{w}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -397,10 +432,30 @@ export const MLLabPage: React.FC = () => {
               <CardContent className="flex flex-col gap-6">
                 {clsResult ? (
                   <div className="flex flex-col gap-6">
+                    {/* Explanation */}
+                    <div className="p-4 rounded-lg border border-brand/30 bg-brand/5 text-sm">
+                      <p className="text-text font-medium">Performance Interpretation:</p>
+                      <ul className="text-muted text-xs mt-2 space-y-1 list-disc list-inside">
+                        <li><strong>Decision Tree:</strong> Learned from maze features (size, density, distance)</li>
+                        <li><strong>Majority Baseline:</strong> Always guessing the most common winner</li>
+                        <li><strong className={
+                          clsResult.metrics.accuracy > clsResult.baseline_accuracy ? 'text-success' : 'text-warn'
+                        }>Result:</strong> {
+                          clsResult.metrics.accuracy > clsResult.baseline_accuracy 
+                            ? `Model beats baseline by ${Math.round((clsResult.metrics.accuracy - clsResult.baseline_accuracy) * 100)}%`
+                            : `Model performs ${Math.round((clsResult.baseline_accuracy - clsResult.metrics.accuracy) * 100)}% worse than baseline`
+                        }</li>
+                      </ul>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 rounded-xl border border-brand/40 bg-brand/10">
+                      <div className={`p-4 rounded-xl border ${
+                        clsResult.metrics.accuracy > clsResult.baseline_accuracy 
+                          ? 'border-brand/40 bg-brand/10' 
+                          : 'border-warn/40 bg-warn/10'
+                      }`}>
                         <span className="text-xs text-muted block">Decision Tree Accuracy</span>
-                        <span className="text-2xl font-bold text-brand tabular-nums">
+                        <span className="text-2xl font-bold text-text tabular-nums">
                           {Math.round(clsResult.metrics.accuracy * 100)}%
                         </span>
                       </div>

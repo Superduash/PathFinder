@@ -508,17 +508,57 @@ export const BenchmarkPage: React.FC = () => {
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-text">Repetitions:</span>
-                <Slider
-                  value={[repeats]}
-                  min={1}
-                  max={15}
-                  step={1}
-                  className="w-36"
-                  onValueChange={([val]) => setRepeats(val)}
-                />
-                <span className="font-mono text-xs text-muted">{repeats} runs</span>
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-text">
+                    Repetitions: <span className="font-mono text-brand">{repeats}</span> runs
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <Slider
+                      value={[repeats]}
+                      min={1}
+                      max={15}
+                      step={1}
+                      className="w-48"
+                      onValueChange={([val]) => setRepeats(val)}
+                    />
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setRepeats(1)}
+                        className={`px-2 py-1 text-xs rounded border transition-colors ${
+                          repeats === 1 
+                            ? "border-brand bg-brand/10 text-brand font-bold" 
+                            : "border-border bg-surface-2 text-muted hover:text-text"
+                        }`}
+                      >
+                        1
+                      </button>
+                      <button
+                        onClick={() => setRepeats(5)}
+                        className={`px-2 py-1 text-xs rounded border transition-colors ${
+                          repeats === 5 
+                            ? "border-brand bg-brand/10 text-brand font-bold" 
+                            : "border-border bg-surface-2 text-muted hover:text-text"
+                        }`}
+                      >
+                        5
+                      </button>
+                      <button
+                        onClick={() => setRepeats(10)}
+                        className={`px-2 py-1 text-xs rounded border transition-colors ${
+                          repeats === 10 
+                            ? "border-brand bg-brand/10 text-brand font-bold" 
+                            : "border-border bg-surface-2 text-muted hover:text-text"
+                        }`}
+                      >
+                        10
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted">
+                    Each algorithm runs {repeats} {repeats === 1 ? "time" : "times"}, median result shown
+                  </p>
+                </div>
               </div>
 
               <Button onClick={handleRunSingle} disabled={isComparing || !maze} className="gap-2 font-semibold">

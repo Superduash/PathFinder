@@ -260,6 +260,10 @@ class ParticipantState(BaseModel):
     info: Optional[list[list[Any]]] = None             # [idx, g, h, order, side?]
     time: Optional[dict] = None                        # {compute_ms, ...}
     steps: Optional[int] = None                        # tick step counter
+    # Phase 3 additions
+    phase: Optional[str] = None                        # "waiting"|"searching"|"done"|"no_route"
+    initial_waiting: Optional[list[list[int]]] = None  # initial frontier cells per racer
+    currents: Optional[list[dict]] = None              # [{side, cell}] for BDS two-sided
 
 
 class RaceReadyMessage(BaseModel):

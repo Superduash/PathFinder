@@ -52,19 +52,21 @@ def wall_with_gap(diagonal: bool = False) -> MazeGrid:
 
 
 def greedy_trap(diagonal: bool = False) -> MazeGrid:
-    """A maze where greedy search gets trapped — long detour required."""
-    rows, cols = 15, 20
+    """A maze where greedy search gets trapped — verified trap layout (polish4.md §0.4).
+
+    21 cols, 15 rows. Walls at col 5, 12, 16 for rows 0-11 and 14 (not rows 12-13 which are doors).
+    Start=(7,1), Goal=(7,19). Greedy takes a suboptimal route; optimal path goes through the doors.
+    """
+    rows, cols = 15, 21
     cells = [0] * (rows * cols)
-    # Vertical wall near goal with one gap at the bottom
-    wall_col = cols - 4
-    for r in range(rows - 2):
-        cells[r * cols + wall_col] = 1
-    # Horizontal wall creating a U-trap near goal
-    trap_row = 2
-    for c in range(wall_col + 1, cols - 1):
-        cells[trap_row * cols + c] = 1
+    wall_cols = [5, 12, 16]
+    door_rows = {12, 13}  # open rows (no walls)
+    for wc in wall_cols:
+        for r in range(rows):
+            if r not in door_rows:
+                cells[r * cols + wc] = 1
     return MazeGrid(rows=rows, cols=cols, cells=cells,
-                    start=(0, 0), goal=(0, cols-1),
+                    start=(7, 1), goal=(7, 19),
                     diagonal=diagonal, seed=None,
                     meta={"preset": "greedy_trap"})
 
@@ -121,6 +123,43 @@ def unreachable_goal(diagonal: bool = False) -> MazeGrid:
                     meta={"preset": "unreachable_goal"})
 
 
+def two_routes(diagonal: bool = False) -> MazeGrid:
+    """Short water route vs long dry route — cost != steps."""
+    rows, cols = 15, 20
+    cells = [0] * (rows * cols)
+    # Horizontal water barrier, full width
+    mid = rows // 2
+    for c in range(cols):
+        cells[mid * cols + c] = 3  # water (cost 5)
+    # Short crossing: narrow sand bridge at col 3 (cost 3)
+    cells[mid * cols + 3] = 2  # sand
+    # Long dry path: walls forcing detour around
+    # Wall blocking direct path col 10 rows 0-mid-1
+    for r in range(mid):
+        cells[r * cols + 10] = 1
+    return MazeGrid(rows=rows, cols=cols, cells=cells,
+                    start=(0, 0), goal=(rows - 1, cols - 1),
+                    diagonal=diagonal, seed=None,
+                    meta={"preset": "two_routes"})
+
+
+def loops_arena(diagonal: bool = False) -> MazeGrid:
+    """21x21 loops maze with seed=42 — several valid routes."""
+    from backend.app.maze.generators import loops as loops_gen
+    maze = loops_gen(rows=21, cols=21, loop_fraction=0.25, weighted=True,
+                     weight_fraction=0.2, diagonal=diagonal, seed=42, randomize_ep=True)
+    maze.meta["preset"] = "loops_arena"
+    return maze
+
+
+def perfect_maze(diagonal: bool = False) -> MazeGrid:
+    """Backtracker perfect maze — exactly one route."""
+    from backend.app.maze.generators import backtracker
+    maze = backtracker(rows=21, cols=21, weighted=False, diagonal=diagonal, seed=11, randomize_ep=True)
+    maze.meta["preset"] = "perfect_maze"
+    return maze
+
+
 PRESETS: dict[str, callable] = {
     "open_field": open_field,
     "wall_with_gap": wall_with_gap,
@@ -128,7 +167,82 @@ PRESETS: dict[str, callable] = {
     "weighted_river": weighted_river,
     "corridor_maze": corridor_maze,
     "unreachable_goal": unreachable_goal,
+    "two_routes": two_routes,
+    "loops_arena": loops_arena,
+    "perfect_maze": perfect_maze,
 }
+
+# Phase 2.5: Preset metadata with lessons
+PRESET_METADATA = {
+    "open_field": {
+        "key": "open_field",
+        "name": "Open Field",
+        "description": "Empty 15×15 grid, start to goal diagonal",
+        "lesson": "Hints shine: A* ≈ Greedy ≪ BFS=UCS",
+        "expect": "A* checks ≤40 cells, BFS checks ≥200"
+    },
+    "wall_with_gap": {
+        "key": "wall_with_gap",
+        "name": "Wall with Gap",
+        "description": "Long wall with single opening",
+        "lesson": "A* needs fewer cells than UCS",
+        "expect": "A* < 0.6 × UCS expansions"
+    },
+    "greedy_trap": {
+        "key": "greedy_trap",
+        "name": "Greedy Trap",
+        "description": "Vertical walls with doors at bottom",
+        "lesson": "Greedy gets fooled, A* doesn't",
+        "expect": "Greedy cost > 1.4 × optimal, A* cost = optimal"
+    },
+    "weighted_river": {
+        "key": "weighted_river",
+        "name": "Weighted River",
+        "description": "Water barrier with sand bridge",
+        "lesson": "UCS/A* beat BFS on cost; BFS = fewest steps",
+        "expect": "BFS cost > UCS cost, BFS moves ≤ UCS moves"
+    },
+    "two_routes": {
+        "key": "two_routes",
+        "name": "Two Routes",
+        "description": "Short water route vs long dry route",
+        "lesson": "Cost ≠ steps",
+        "expect": "UCS cost < BFS cost and UCS moves > BFS moves"
+    },
+    "loops_arena": {
+        "key": "loops_arena",
+        "name": "Loops Arena",
+        "description": "21×21 maze with multiple loops",
+        "lesson": "Several valid routes; DFS wanders",
+        "expect": "3+ distinct routes"
+    },
+    "corridor_maze": {
+        "key": "corridor_maze",
+        "name": "Corridor Maze",
+        "description": "Long narrow corridors",
+        "lesson": "Dead ends affect exploration patterns",
+        "expect": "2+ distinct routes"
+    },
+    "unreachable_goal": {
+        "key": "unreachable_goal",
+        "name": "Unreachable Goal",
+        "description": "Goal sealed by walls",
+        "lesson": "All algorithms fail gracefully",
+        "expect": "All status = failed with no_path"
+    },
+    "perfect_maze": {
+        "key": "perfect_maze",
+        "name": "Perfect Maze (One Route)",
+        "description": "Backtracker with no loops",
+        "lesson": "Every algorithm finds the same route; only effort differs",
+        "expect": "Exactly 1 distinct route"
+    },
+}
+
+
+def get_preset_list() -> list[dict]:
+    """Phase 2.5: Return list of presets with metadata."""
+    return [PRESET_METADATA[key] for key in PRESETS.keys()]
 
 
 def load_preset(name: str, diagonal: bool = False) -> MazeGrid:

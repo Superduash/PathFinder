@@ -30,7 +30,11 @@ class ParticipantSession:
                 break
         self.accumulated_compute_s += (time.perf_counter() - t0)
 
-        if self.search.delta_expanded:
+        # Phase 3.2: Handle BDS two-sided currents properly
+        if hasattr(self.search, 'currents'):
+            # BDS: use forward side as primary current for compatibility
+            self.last_cell = self.search.currents.get("forward")
+        elif self.search.delta_expanded:
             self.last_cell = self.search.delta_expanded[-1]
 
         return self.search.status in ("found", "failed")
@@ -44,20 +48,46 @@ class ParticipantSession:
         delta_disc = [list(pt) for pt in s.delta_discovered] if is_update else None
         curr = list(self.last_cell) if (is_update and self.last_cell and s.status in ("init", "running")) else None
 
+        # Phase 3.2: Build currents array for BDS two-sided visualization
+        currents_list = None
+        if is_update and hasattr(s, 'currents'):
+            currents_list = []
+            for side in ["forward", "backward"]:
+                cell = s.currents.get(side)
+                if cell is not None:
+                    currents_list.append({"side": side, "cell": list(cell)})
+        elif is_update and curr:
+            # Non-BDS: single current with no side
+            currents_list = [{"side": None, "cell": curr}]
+
         note = None
-        if narrate and is_update and self.last_cell and s.status in ("init", "running"):
-            g_cost = s.g_costs.get(self.last_cell, 0.0) if hasattr(s, "g_costs") else None
-            h_cost = 0.0
-            if hasattr(s, "h_fn") and s.h_fn:
-                gr, gc = s.maze.goal
-                h_cost = s.h_fn(self.last_cell[0], self.last_cell[1], gr, gc)
-            note = narrate_step(self.algorithm, self.heuristic, self.last_cell, g_cost, h_cost)
+        if narrate and is_update and s.status in ("init", "running"):
+            # Phase 3.2: BDS needs per-side narration
+            if hasattr(s, 'currents') and hasattr(s, 'current_side'):
+                side = s.current_side
+                cell = s.currents.get(side)
+                if cell:
+                    dist = None
+                    if side == "forward" and hasattr(s, 'dist_f'):
+                        dist = s.dist_f.get(cell, 0)
+                    elif side == "backward" and hasattr(s, 'dist_b'):
+                        dist = s.dist_b.get(cell, 0)
+                    ref = "Start" if side == "forward" else "Goal"
+                    note = f"{side.capitalize()} wave checks {cell} — {dist} steps from {ref}"
+            elif self.last_cell:
+                g_cost = s.g_costs.get(self.last_cell, 0.0) if hasattr(s, "g_costs") else None
+                h_cost = 0.0
+                if hasattr(s, "h_fn") and s.h_fn:
+                    gr, gc = s.maze.goal
+                    h_cost = s.h_fn(self.last_cell[0], self.last_cell[1], gr, gc)
+                note = narrate_step(self.algorithm, self.heuristic, self.last_cell, g_cost, h_cost)
 
         info = None
         if show_values and is_update:
             info = []
             cols = s.maze.cols
-            reported = set(s.delta_expanded + s.delta_discovered)
+            # Phase 1.3/1.4: Build info from ordered lists (B4) with per-cell order (B1)
+            reported = list(s.delta_expanded) + list(s.delta_discovered)
             for cell in reported:
                 idx = cell[0] * cols + cell[1]
                 g_val = s.g_costs.get(cell, 0.0) if hasattr(s, "g_costs") else 0.0
@@ -65,9 +95,19 @@ class ParticipantSession:
                 if hasattr(s, "h_fn") and s.h_fn:
                     gr, gc = s.maze.goal
                     h_val = round(s.h_fn(cell[0], cell[1], gr, gc), 1)
-                order_val = len(s.trace)
+                # Phase 1.4: Use per-cell order (B1) - null for merely discovered cells
+                order_val = getattr(s, "order", {}).get(cell)
                 side_val = getattr(s, "cell_sides", {}).get(cell)
                 info.append([idx, g_val, h_val, order_val, side_val])
+
+        # Phase 3.3: Derive phase from status
+        phase_map = {
+            "init": "waiting",
+            "running": "searching",
+            "found": "done",
+            "failed": "no_route"
+        }
+        phase = phase_map.get(s.status, "waiting")
 
         compute_ms = round(self.accumulated_compute_s * 1000, 3)
 
@@ -87,10 +127,12 @@ class ParticipantSession:
             delta_expanded=delta_exp,
             delta_discovered=delta_disc,
             current=curr,
+            currents=currents_list,
             note=note,
             info=info,
             time={"compute_ms": compute_ms},
             steps=steps,
+            phase=phase,
         )
 
 
@@ -109,8 +151,19 @@ class RaceSession:
         self.start_time = time.time()
 
     def get_ready_message(self) -> RaceReadyMessage:
-        states = [p.to_state(self.c_star, is_update=False, narrate=False, show_values=False, steps=0) for p in self.participants]
-        initial_cells = [list(self.maze.start), list(self.maze.goal)]
+        # Phase 3.1: Build per-racer initial_waiting 
+        participants_with_initial = []
+        for i, p in enumerate(self.participants):
+            state = p.to_state(self.c_star, is_update=False, narrate=False, show_values=False, steps=0)
+            # BDS: start and goal; others: start only
+            if p.algorithm == "bds":
+                state.initial_waiting = [list(self.maze.start), list(self.maze.goal)]
+            else:
+                state.initial_waiting = [list(self.maze.start)]
+            participants_with_initial.append(state)
+        
+        # Keep deprecated 'initial' field for compatibility (start only)
+        initial_cells = [list(self.maze.start)]
 
         racers_meta = []
         for i, p in enumerate(self.participants):
@@ -125,7 +178,7 @@ class RaceSession:
 
         return RaceReadyMessage(
             raceId=self.race_id,
-            participants=states,
+            participants=participants_with_initial,
             initial=initial_cells,
             reachable=(self.c_star is not None),
             optimal_cost=self.c_star,

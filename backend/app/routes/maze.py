@@ -113,3 +113,60 @@ def api_heuristic_map(req: HeuristicMapRequest) -> dict:
         "heuristic": req.heuristic,
     }
 
+
+
+
+@router.post("/maze/analyze")
+def api_analyze_maze(payload: dict) -> dict:
+    """Phase 2.7: Analyze maze structure and return hints."""
+    maze_data = payload.get("maze")
+    if not maze_data:
+        raise ApiError("INVALID_PARAMS", "Missing maze")
+    
+    from backend.app.maze.grid import MazeGrid
+    from backend.app.search.reference import is_reachable
+    
+    maze = MazeGrid.from_dict(maze_data)
+    
+    # Count open cells and terrain
+    open_cells = sum(1 for c in maze.cells if c == 0)
+    terrain_cells = sum(1 for c in maze.cells if c in (2, 3))
+    walls = sum(1 for c in maze.cells if c == 1)
+    
+    # Check reachability
+    reachable = is_reachable(maze)
+    
+    # Count cycles (edges - nodes + 1)
+    if reachable:
+        edges = 0
+        open_coords = [(r, c) for r in range(maze.rows) for c in range(maze.cols) if maze.cell(r, c) != 1]
+        for r, c in open_coords:
+            for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]:
+                nr, nc = r + dr, c + dc
+                if maze.in_bounds(nr, nc) and maze.cell(nr, nc) != 1:
+                    edges += 1
+        edges //= 2
+        cycles = max(0, edges - len(open_coords) + 1)
+    else:
+        cycles = 0
+    
+    # Determine if perfect maze (0 cycles among reachable cells)
+    is_perfect = cycles == 0 and reachable
+    
+    # Route diversity hint
+    if cycles == 0:
+        route_diversity_hint = "single_route"
+    elif cycles <= 4:
+        route_diversity_hint = "few_routes"
+    else:
+        route_diversity_hint = "many_routes"
+    
+    return {
+        "reachable": reachable,
+        "open_cells": open_cells,
+        "terrain_cells": terrain_cells,
+        "walls": walls,
+        "cycles": cycles,
+        "is_perfect": is_perfect,
+        "route_diversity_hint": route_diversity_hint,
+    }
