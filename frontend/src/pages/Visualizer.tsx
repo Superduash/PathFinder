@@ -31,26 +31,43 @@ export const VisualizerPage: React.FC = () => {
     updateCell,
   } = useAppStore();
 
-  const [viewMode, setViewMode] = useState<"edit" | "race">("race");
+  const [viewMode, setViewMode] = useState<"edit" | "race">(() => {
+    const saved = localStorage.getItem("pathfinder-view-mode");
+    return (saved as "edit" | "race") || "race";
+  });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const generationIdRef = useRef(0);
 
   // Overlay Mode and Heuristic Map state (§4.3)
-  const [overlayMode, setOverlayMode] = useState<OverlayMode>("off");
-  const [showHintMap, setShowHintMap] = useState<boolean>(false);
+  const [overlayMode, setOverlayMode] = useState<OverlayMode>(() => {
+    const saved = localStorage.getItem("pathfinder-overlay-mode");
+    return (saved as OverlayMode) || "off";
+  });
+  const [showHintMap, setShowHintMap] = useState<boolean>(() => {
+    const saved = localStorage.getItem("pathfinder-show-hint-map");
+    return saved === "true";
+  });
   const [heuristicMap, setHeuristicMap] = useState<number[] | null>(null);
 
-  const [mazeConfig, setMazeConfig] = useState<MazeConfig>({
-    rows: 21,
-    cols: 21,
-    genType: "backtracker",
-    density: 0.25,
-    diagonal: false,
-    weighted: false,
-    weightFraction: 0.3,
-    seed: 42,
+  const [mazeConfig, setMazeConfig] = useState<MazeConfig>(() => {
+    const saved = localStorage.getItem("pathfinder-maze-config");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+    return {
+      rows: 21,
+      cols: 21,
+      genType: "backtracker",
+      density: 0.25,
+      diagonal: false,
+      weighted: false,
+      weightFraction: 0.3,
+      seed: 42,
+    };
   });
 
   const {
@@ -87,6 +104,23 @@ export const VisualizerPage: React.FC = () => {
       }
     }
   }, [searchParams]);
+
+  // Persist settings to localStorage
+  useEffect(() => {
+    localStorage.setItem("pathfinder-view-mode", viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem("pathfinder-overlay-mode", overlayMode);
+  }, [overlayMode]);
+
+  useEffect(() => {
+    localStorage.setItem("pathfinder-show-hint-map", String(showHintMap));
+  }, [showHintMap]);
+
+  useEffect(() => {
+    localStorage.setItem("pathfinder-maze-config", JSON.stringify(mazeConfig));
+  }, [mazeConfig]);
 
   // First-visit interactive tour
   useEffect(() => {
@@ -240,7 +274,9 @@ export const VisualizerPage: React.FC = () => {
 
   // Cell drawing click handler for editor mode
   const handleCellClick = (r: number, c: number) => {
-    if (raceState !== "idle" && raceState !== "ready") return;
+    // Allow editing in edit mode when race is idle or ready
+    if (viewMode !== "edit") return;
+    if (raceState === "running") return;
     if (!maze) return;
 
     if (selectedTool === "start") {
@@ -257,9 +293,9 @@ export const VisualizerPage: React.FC = () => {
     }
   };
 
-  const { canvasRef } = useMazeCanvas({
+  const { canvasRef, handlers } = useMazeCanvas({
     maze,
-    interactive: viewMode === "edit" && (raceState === "idle" || raceState === "ready"),
+    interactive: viewMode === "edit" && raceState !== "running",
     onCellClick: handleCellClick,
   });
 
@@ -396,7 +432,7 @@ export const VisualizerPage: React.FC = () => {
             /* Large Single Canvas Editor */
             <div className="flex-1 flex flex-col items-center justify-center relative w-full h-full">
               <div className="w-full max-w-[580px] aspect-square rounded-xl overflow-hidden border border-border shadow-xs bg-bg relative">
-                <canvas ref={canvasRef} className="w-full h-full block cursor-crosshair" />
+                <canvas ref={canvasRef} className="w-full h-full block cursor-crosshair" {...handlers} />
               </div>
               <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-surface-2 border border-border text-[11px] text-muted font-medium select-none">
                 Click & drag to draw · Switch to Race View to compare

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { Maze, Participant } from "@/lib/types";
 
 export type ToolType = "wall" | "erase" | "start" | "goal" | "sand" | "water";
@@ -17,27 +18,41 @@ interface AppState {
   updateCell: (r: number, c: number, code: number) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  maze: null,
-  selectedTool: "wall",
-  participants: [
-    { algorithm: "bfs" },
-    { algorithm: "astar", heuristic: "manhattan" },
-  ],
-  speed: 5,
-  isRaceMode: false,
-  setMaze: (maze) => set({ maze }),
-  setSelectedTool: (selectedTool) => set({ selectedTool }),
-  setParticipants: (participants) => set({ participants }),
-  setSpeed: (speed) => set({ speed }),
-  setIsRaceMode: (isRaceMode) => set({ isRaceMode }),
-  updateCell: (r, c, code) =>
-    set((state) => {
-      if (!state.maze) return state;
-      const idx = r * state.maze.cols + c;
-      const newCells = [...state.maze.cells];
-      newCells[idx] = code;
-      return { maze: { ...state.maze, cells: newCells } };
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      maze: null,
+      selectedTool: "wall",
+      participants: [
+        { algorithm: "bfs" },
+        { algorithm: "astar", heuristic: "manhattan" },
+      ],
+      speed: 5,
+      isRaceMode: false,
+      setMaze: (maze) => set({ maze }),
+      setSelectedTool: (selectedTool) => set({ selectedTool }),
+      setParticipants: (participants) => set({ participants }),
+      setSpeed: (speed) => set({ speed }),
+      setIsRaceMode: (isRaceMode) => set({ isRaceMode }),
+      updateCell: (r, c, code) =>
+        set((state) => {
+          if (!state.maze) return state;
+          const idx = r * state.maze.cols + c;
+          const newCells = [...state.maze.cells];
+          newCells[idx] = code;
+          return { maze: { ...state.maze, cells: newCells } };
+        }),
     }),
-}));
+    {
+      name: "pathfinder-app-storage",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        maze: state.maze,
+        participants: state.participants,
+        speed: state.speed,
+        selectedTool: state.selectedTool,
+      }),
+    }
+  )
+);
 
