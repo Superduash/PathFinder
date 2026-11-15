@@ -20,6 +20,8 @@ interface MazeSettingsModalProps {
   onClose: () => void;
   config: MazeConfig;
   onApply: (newConfig: MazeConfig) => void;
+  onResetDefaults?: () => void;
+  defaultConfig?: MazeConfig;
 }
 
 const STYLES = [
@@ -27,7 +29,6 @@ const STYLES = [
   { id: "backtracker", name: "Twisty Corridors", desc: "Long winding paths with dead-ends" },
   { id: "braided", name: "Loops & Braids", desc: "Multiple alternative paths to the goal" },
   { id: "random", name: "Random Walls", desc: "Scattered obstacles with variable density" },
-  { id: "weighted", name: "Terrain Blobs", desc: "Patches of Sand and Water" },
 ];
 
 export const MazeSettingsModal: React.FC<MazeSettingsModalProps> = ({
@@ -35,6 +36,8 @@ export const MazeSettingsModal: React.FC<MazeSettingsModalProps> = ({
   onClose,
   config,
   onApply,
+  onResetDefaults,
+  defaultConfig,
 }) => {
   const [local, setLocal] = useState<MazeConfig>({ ...config });
   const [copied, setCopied] = useState(false);
@@ -97,7 +100,7 @@ export const MazeSettingsModal: React.FC<MazeSettingsModalProps> = ({
               }}
               className="w-full accent-brand cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] text-muted">
+            <div className="flex justify-between text-xs text-muted">
               <span>7×7 (Fast)</span>
               <span>21×21 (Standard)</span>
               <span>35×35 (Detailed)</span>
@@ -120,7 +123,7 @@ export const MazeSettingsModal: React.FC<MazeSettingsModalProps> = ({
                   }`}
                 >
                   <span className="font-bold text-xs">{st.name}</span>
-                  <span className="text-[10px] text-muted line-clamp-1">{st.desc}</span>
+                  <span className="text-xs text-muted line-clamp-1">{st.desc}</span>
                 </button>
               ))}
             </div>
@@ -150,7 +153,7 @@ export const MazeSettingsModal: React.FC<MazeSettingsModalProps> = ({
             <label className="flex items-center justify-between p-3 rounded-xl bg-surface-2 border border-border cursor-pointer">
               <div className="flex flex-col">
                 <span className="font-semibold text-text">Diagonal Moves</span>
-                <span className="text-[10px] text-muted">8 directions (√2 cost)</span>
+                <span className="text-xs text-muted">8 directions (√2 cost)</span>
               </div>
               <input
                 type="checkbox"
@@ -163,7 +166,7 @@ export const MazeSettingsModal: React.FC<MazeSettingsModalProps> = ({
             <label className="flex items-center justify-between p-3 rounded-xl bg-surface-2 border border-border cursor-pointer">
               <div className="flex flex-col">
                 <span className="font-semibold text-text">Terrain Weights</span>
-                <span className="text-[10px] text-muted">Sand & Water patches</span>
+                <span className="text-xs text-muted">Sand & Water patches</span>
               </div>
               <input
                 type="checkbox"
@@ -205,6 +208,7 @@ export const MazeSettingsModal: React.FC<MazeSettingsModalProps> = ({
 
           {/* Modal Actions */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-border mt-2">
+            {onResetDefaults && <button type="button" onClick={() => { onResetDefaults(); if (defaultConfig) setLocal({ ...defaultConfig }); }} className="mr-auto px-4 py-2 rounded-xl border border-border text-muted hover:text-text hover:bg-surface-2 font-semibold transition-colors">Reset to defaults</button>}
             <button
               type="button"
               onClick={onClose}

@@ -17,7 +17,7 @@ export const SiteFooter: React.FC = () => {
 
         <div className="flex flex-wrap gap-8">
           <div className="flex flex-col gap-2">
-            <span className="font-semibold text-text uppercase tracking-wider text-[11px]">Pages</span>
+            <span className="font-semibold text-text uppercase tracking-wider text-xs">Pages</span>
             <Link to="/visualizer" className="hover:text-text transition-colors">Visualizer</Link>
             <Link to="/benchmark" className="hover:text-text transition-colors">Benchmark</Link>
             <Link to="/lab" className="hover:text-text transition-colors">ML Lab</Link>
@@ -25,7 +25,7 @@ export const SiteFooter: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="font-semibold text-text uppercase tracking-wider text-[11px]">Tech</span>
+            <span className="font-semibold text-text uppercase tracking-wider text-xs">Tech</span>
             <span>React &amp; Vite</span>
             <span>FastAPI &amp; Uvicorn</span>
             <span>Scikit-learn</span>

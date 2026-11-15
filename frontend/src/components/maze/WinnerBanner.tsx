@@ -36,7 +36,7 @@ export const WinnerBanner: React.FC<WinnerBannerProps> = ({
             <span className="font-bold text-base text-text">
               {winner.algorithm.toUpperCase()} Wins the Race
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-brand/20 text-brand text-[11px] font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-brand/20 text-brand text-xs font-bold">
               Winner
             </span>
           </div>
@@ -84,7 +84,7 @@ export const WinnerBanner: React.FC<WinnerBannerProps> = ({
                 return (
                   <span
                     key={i}
-                    className={`inline-block px-2.5 py-1 rounded-md border text-[11px] font-medium ${toneClasses}`}
+                    className={`inline-block px-2.5 py-1 rounded-md border text-xs font-medium ${toneClasses}`}
                   >
                     {text}
                   </span>

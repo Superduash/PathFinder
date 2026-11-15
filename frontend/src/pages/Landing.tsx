@@ -188,7 +188,7 @@ export const LandingPage: React.FC = () => {
               <span className="w-2.5 h-2.5 rounded-full bg-success/60" />
               <span className="text-xs font-medium text-muted ml-2">Live Head-to-Head Search Race</span>
             </div>
-            <Chip variant="brand" className="text-[10px] uppercase font-bold tracking-wider">
+            <Chip variant="brand" className="text-xs uppercase font-bold tracking-wider">
               {raceState}
             </Chip>
           </div>
@@ -198,7 +198,7 @@ export const LandingPage: React.FC = () => {
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between items-center text-xs">
                 <span className="font-bold text-alg-bfs">● BFS</span>
-                <span className="text-muted tabular-nums text-[11px]">{bfsStats?.expanded || 0} checked</span>
+                <span className="text-muted tabular-nums text-xs">{bfsStats?.expanded || 0} checked</span>
               </div>
               <div className="w-full aspect-square rounded-xl overflow-hidden border border-border bg-bg">
                 <canvas ref={bfsCanvasRef} className="w-full h-full block" />
@@ -208,7 +208,7 @@ export const LandingPage: React.FC = () => {
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between items-center text-xs">
                 <span className="font-bold text-alg-astar">★ A*</span>
-                <span className="text-muted tabular-nums text-[11px]">{astarStats?.expanded || 0} checked</span>
+                <span className="text-muted tabular-nums text-xs">{astarStats?.expanded || 0} checked</span>
               </div>
               <div className="w-full aspect-square rounded-xl overflow-hidden border border-border bg-bg">
                 <canvas ref={astarCanvasRef} className="w-full h-full block" />
@@ -218,11 +218,11 @@ export const LandingPage: React.FC = () => {
 
           {/* Real-time counters & legend row */}
           <div className="pt-2 border-t border-border flex flex-col gap-2 text-xs">
-            <div className="flex justify-between text-muted text-[11px]">
+            <div className="flex justify-between text-muted text-xs">
               <span>BFS checked <strong className="text-text">{bfsStats?.expanded || 0}</strong> cells</span>
               <span>A* checked <strong className="text-brand">{astarStats?.expanded || 0}</strong> cells</span>
             </div>
-            <div className="flex items-center justify-center gap-4 text-[10px] text-muted font-medium">
+            <div className="flex items-center justify-center gap-4 text-xs text-muted font-medium">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded bg-brand/30 border border-brand/50" /> Visited
               </span>
@@ -329,7 +329,7 @@ export const LandingPage: React.FC = () => {
 
               <div className="mt-6 pt-4 border-t border-border flex flex-col gap-1.5">
                 {alg.chips.map((c, i) => (
-                  <span key={i} className="text-[10px] text-muted font-medium flex items-center gap-1.5">
+                  <span key={i} className="text-xs text-muted font-medium flex items-center gap-1.5">
                     <span className="w-1 h-1 rounded-full bg-muted/60" /> {c}
                   </span>
                 ))}

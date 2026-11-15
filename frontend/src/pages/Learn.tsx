@@ -156,7 +156,7 @@ function AlgorithmWalkthrough({ algorithmId }: { algorithmId: string }) {
     <div className="flex flex-col gap-3">
       {/* Scenario selector */}
       <div className="flex items-center gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted">
           Scenario:
         </span>
         {["tiny", "trap", "river"].map((s) => (
@@ -181,7 +181,7 @@ function AlgorithmWalkthrough({ algorithmId }: { algorithmId: string }) {
         {/* Frame info */}
         <div className="flex-1 flex flex-col gap-2 text-xs">
           <div className="bg-surface-2 border border-border rounded-lg p-3 min-h-[60px]">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-muted mb-1">
+            <div className="text-xs font-bold uppercase tracking-wider text-muted mb-1">
               Step {frameIdx + 1} / {data.total_steps}
             </div>
             <p className="text-text leading-relaxed">{frame?.note || "—"}</p>
@@ -189,21 +189,21 @@ function AlgorithmWalkthrough({ algorithmId }: { algorithmId: string }) {
 
           {frame && frame.waiting.length > 0 && (
             <div className="bg-surface-2 border border-border rounded-lg p-2.5">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted mb-1">
+              <div className="text-xs font-bold uppercase tracking-wider text-muted mb-1">
                 Frontier ({frame.waiting.length} cells)
               </div>
               <div className="flex flex-wrap gap-1">
                 {frame.waiting.slice(0, 6).map((w) => (
                   <span
                     key={w.idx}
-                    className="font-mono text-[10px] bg-brand/15 text-brand px-1.5 py-0.5 rounded"
+                    className="font-mono text-xs bg-brand/15 text-brand px-1.5 py-0.5 rounded"
                   >
                     ({w.coord[0]},{w.coord[1]})
                     {w.h !== null ? ` f=${w.f}` : ` g=${w.g}`}
                   </span>
                 ))}
                 {frame.waiting.length > 6 && (
-                  <span className="text-muted text-[10px]">
+                  <span className="text-muted text-xs">
                     +{frame.waiting.length - 6} more
                   </span>
                 )}
@@ -213,7 +213,7 @@ function AlgorithmWalkthrough({ algorithmId }: { algorithmId: string }) {
 
           {isEnd && (
             <div
-              className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg ${
+              className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg ${
                 data.found
                   ? "bg-green-500/15 text-green-400"
                   : "bg-red-500/15 text-red-400"
@@ -349,7 +349,7 @@ function GlossarySection() {
         >
           <span className="font-bold text-text text-sm">{item.term}</span>
           <span className="text-muted text-xs leading-relaxed">{item.plain}</span>
-          <span className="text-muted/70 text-[10px] font-mono leading-relaxed italic">
+          <span className="text-muted/70 text-xs font-mono leading-relaxed italic">
             {item.technical}
           </span>
         </div>
@@ -652,7 +652,7 @@ export const LearnPage: React.FC = () => {
       {/* Sidebar */}
       <aside className="lg:w-52 flex-shrink-0">
         <div className="sticky top-20 flex flex-col gap-1">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted px-2 pb-1">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted px-2 pb-1">
             Learn
           </h2>
           {LESSONS.map((l) => {

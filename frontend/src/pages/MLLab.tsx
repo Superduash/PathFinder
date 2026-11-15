@@ -247,7 +247,7 @@ export const MLLabPage: React.FC = () => {
 
                 {regStatus === "running" && regProgress && (
                   <div className="flex flex-col gap-1.5 pt-2">
-                    <div className="flex justify-between font-mono text-[11px] text-muted">
+                    <div className="flex justify-between font-mono text-xs text-muted">
                       <span>{regProgress.label}</span>
                       <span>{regProgress.done}/{regProgress.total}</span>
                     </div>
@@ -283,7 +283,7 @@ export const MLLabPage: React.FC = () => {
                         <div key={idx} className="p-4 rounded-xl border border-border bg-surface-2 flex flex-col gap-1">
                           <span className="text-xs text-muted block">{m.model}</span>
                           <span className="text-xl font-bold text-text tabular-nums">{m.mae} MAE</span>
-                          <span className={`text-[11px] tabular-nums mt-1 font-mono ${
+                          <span className={`text-xs tabular-nums mt-1 font-mono ${
                             m.overestimate_pct > 5 ? 'text-warn font-bold' : 'text-muted'
                           }`}>
                             {m.overestimate_pct}% overestimates
@@ -320,20 +320,20 @@ export const MLLabPage: React.FC = () => {
                         <div className="flex flex-col gap-3 pt-2">
                           <div className="grid grid-cols-2 gap-3 text-xs font-mono">
                             <div className="p-3 rounded-lg border border-border bg-surface">
-                              <span className="text-muted block text-[10px]">STANDARD A* (MANHATTAN)</span>
+                              <span className="text-muted block text-xs">STANDARD A* (MANHATTAN)</span>
                               <div className="text-sm font-bold text-text mt-1">
                                 Checked: {astarCompareResult.standard_astar.expanded}
                               </div>
                               <div className="text-text mt-0.5">Cost: {astarCompareResult.standard_astar.cost}</div>
-                              <div className="text-muted mt-0.5 text-[10px]">Optimality: {Math.round((astarCompareResult.standard_astar.optimality || 1) * 100)}%</div>
+                              <div className="text-muted mt-0.5 text-xs">Optimality: {Math.round((astarCompareResult.standard_astar.optimality || 1) * 100)}%</div>
                             </div>
                             <div className="p-3 rounded-lg border border-brand/40 bg-brand/10">
-                              <span className="text-brand block text-[10px]">LEARNED HEURISTIC A*</span>
+                              <span className="text-brand block text-xs">LEARNED HEURISTIC A*</span>
                               <div className="text-sm font-bold text-brand mt-1">
                                 Checked: {astarCompareResult.learned_astar.expanded}
                               </div>
                               <div className="text-text mt-0.5">Cost: {astarCompareResult.learned_astar.cost}</div>
-                              <div className={`mt-0.5 text-[10px] font-semibold ${
+                              <div className={`mt-0.5 text-xs font-semibold ${
                                 (astarCompareResult.learned_astar.optimality || 0) >= 0.999 ? 'text-success' : 'text-warn'
                               }`}>
                                 Optimality: {Math.round((astarCompareResult.learned_astar.optimality || 0) * 100)}%
@@ -376,7 +376,7 @@ export const MLLabPage: React.FC = () => {
                   <div className="flex items-center gap-1.5">
                     {mlStatus?.classification && <Chip variant="success">Trained</Chip>}
                     {mlStatus?.classification?.classes && !mlStatus.classification.classes.includes("bds") && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30 text-xs font-bold">
                         Old Model (no BDS) — Retrain
                       </span>
                     )}
@@ -412,7 +412,7 @@ export const MLLabPage: React.FC = () => {
 
                 {clsStatus === "running" && clsProgress && (
                   <div className="flex flex-col gap-1.5 pt-2">
-                    <div className="flex justify-between font-mono text-[11px] text-muted">
+                    <div className="flex justify-between font-mono text-xs text-muted">
                       <span>{clsProgress.label}</span>
                       <span>{clsProgress.done}/{clsProgress.total}</span>
                     </div>
@@ -481,13 +481,13 @@ export const MLLabPage: React.FC = () => {
                       {predictResult && (
                         <div className="p-3 rounded-lg border border-border bg-surface flex items-center justify-between font-mono text-xs">
                           <div>
-                            <span className="text-muted block text-[10px]">PREDICTED WINNER:</span>
+                            <span className="text-muted block text-xs">PREDICTED WINNER:</span>
                             <span className="font-bold text-brand text-sm uppercase">
                               {predictResult.predicted_algorithm}
                             </span>
                           </div>
                           <div>
-                            <span className="text-muted block text-[10px]">ACTUAL RACE WINNER:</span>
+                            <span className="text-muted block text-xs">ACTUAL RACE WINNER:</span>
                             <span className="font-bold text-text text-sm uppercase">
                               {predictResult.actual_winner}
                             </span>
@@ -558,18 +558,18 @@ export const MLLabPage: React.FC = () => {
                           <div className="font-bold text-text">#{m.id} - {m.name}</div>
                         </td>
                         <td className="py-2.5 px-3">
-                          <span className="px-2 py-0.5 rounded uppercase font-bold text-[10px] bg-brand/15 text-brand">
+                          <span className="px-2 py-0.5 rounded uppercase font-bold text-xs bg-brand/15 text-brand">
                             {m.kind}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-muted text-[11px]">{m.created_at || "—"}</td>
+                        <td className="py-2.5 px-3 text-muted text-xs">{m.created_at || "—"}</td>
                         <td className="py-2.5 px-3">
                           {m.is_active ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-bold">
                               <Check className="w-3 h-3" /> Active
                             </span>
                           ) : (
-                            <span className="text-muted text-[10px]">Inactive</span>
+                            <span className="text-muted text-xs">Inactive</span>
                           )}
                         </td>
                         <td className="py-2.5 px-3">
@@ -577,7 +577,7 @@ export const MLLabPage: React.FC = () => {
                             {!m.is_active && (
                               <button
                                 onClick={() => handleActivateModel(m.id)}
-                                className="px-2.5 py-1 rounded bg-surface border border-border text-[11px] text-text hover:bg-surface-2 font-medium"
+                                className="px-2.5 py-1 rounded bg-surface border border-border text-xs text-text hover:bg-surface-2 font-medium"
                               >
                                 Activate
                               </button>

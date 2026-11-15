@@ -90,7 +90,7 @@ export const TilePalette: React.FC<TilePaletteProps> = ({
   return (
     <aside className="w-40 shrink-0 flex flex-col gap-3 p-3 bg-surface border border-border rounded-xl shadow-xs select-none">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted">
           Draw Palette
         </span>
       </div>
@@ -116,7 +116,7 @@ export const TilePalette: React.FC<TilePaletteProps> = ({
                 <span className="truncate">{t.label}</span>
               </div>
               <span
-                className={`text-[10px] px-1 py-0.5 rounded border font-mono ${t.costClass}`}
+                className={`text-xs px-1 py-0.5 rounded border font-mono ${t.costClass}`}
               >
                 {t.cost}
               </span>
@@ -129,7 +129,7 @@ export const TilePalette: React.FC<TilePaletteProps> = ({
 
       {/* Legend Marks */}
       <div className="flex flex-col gap-1.5">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted">
           Legend
         </span>
         <div
@@ -137,21 +137,21 @@ export const TilePalette: React.FC<TilePaletteProps> = ({
           className="flex items-center gap-2 p-1.5 rounded-md text-xs text-muted hover:text-text hover:bg-surface-2 transition-colors cursor-help"
         >
           <div className="w-3.5 h-3.5 rounded bg-brand/30 border border-brand/60 shrink-0" />
-          <span className="font-medium text-[11px]">Checked</span>
+          <span className="font-medium text-xs">Checked</span>
         </div>
         <div
           title="Cells discovered on the search frontier waiting to be evaluated"
           className="flex items-center gap-2 p-1.5 rounded-md text-xs text-muted hover:text-text hover:bg-surface-2 transition-colors cursor-help"
         >
           <div className="w-3.5 h-3.5 rounded border-2 border-brand shrink-0" />
-          <span className="font-medium text-[11px]">Waiting</span>
+          <span className="font-medium text-xs">Waiting</span>
         </div>
         <div
           title="The final path found from Start to Goal"
           className="flex items-center gap-2 p-1.5 rounded-md text-xs text-muted hover:text-text hover:bg-surface-2 transition-colors cursor-help"
         >
           <div className="w-3.5 h-1 rounded bg-brand shrink-0" />
-          <span className="font-medium text-[11px]">Route</span>
+          <span className="font-medium text-xs">Route</span>
         </div>
       </div>
     </aside>

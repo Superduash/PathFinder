@@ -21,7 +21,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             {title}
           </h1>
           {badge && (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-brand/15 text-brand font-semibold border border-brand/20">
+            <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-brand/15 text-brand font-semibold border border-brand/20">
               {badge}
             </span>
           )}

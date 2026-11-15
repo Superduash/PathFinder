@@ -83,13 +83,13 @@ export const CellInspector: React.FC<CellInspectorProps> = ({
         <span className="font-bold text-text">
           Cell ({r}, {c})
         </span>
-        <span className="text-[11px] font-mono text-brand uppercase font-bold">
+        <span className="text-xs font-mono text-brand uppercase font-bold">
           {algorithm.toUpperCase()}
         </span>
       </div>
 
       {/* Terrain & Status */}
-      <div className="flex flex-col gap-1 text-[11px]">
+      <div className="flex flex-col gap-1 text-xs">
         <div className="flex justify-between">
           <span className="text-muted">Terrain:</span>
           <span className="font-semibold text-text">
@@ -117,7 +117,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({
 
       {/* Values (g, h, f) */}
       {cellInfo && (
-        <div className="flex flex-col gap-1 pt-1 border-t border-border/60 text-[11px] font-mono">
+        <div className="flex flex-col gap-1 pt-1 border-t border-border/60 text-xs font-mono">
           {(algKey === "ucs" || algKey === "astar" || algKey === "bds") && (
             <div className="flex justify-between">
               <span className="text-muted font-sans">g (cost so far):</span>
@@ -144,7 +144,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({
       )}
 
       {/* Why explanation */}
-      <div className="pt-1 border-t border-border/40 text-[10px] text-muted leading-relaxed italic">
+      <div className="pt-1 border-t border-border/40 text-xs text-muted leading-relaxed italic">
         {why}
       </div>
     </div>

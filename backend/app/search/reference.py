@@ -2,11 +2,18 @@
 from __future__ import annotations
 import heapq
 import math
+from functools import lru_cache
 from typing import Optional
 from backend.app.maze.grid import MazeGrid
 
 
-def dijkstra_optimal_cost(maze: MazeGrid) -> Optional[float]:
+@lru_cache(maxsize=32)
+def _dijkstra_cached(rows: int, cols: int, cells: tuple[int, ...], start: tuple[int, int], goal: tuple[int, int], diagonal: bool) -> Optional[float]:
+    maze = MazeGrid(rows=rows, cols=cols, cells=list(cells), start=start, goal=goal, diagonal=diagonal)
+    return _dijkstra_uncached(maze)
+
+
+def _dijkstra_uncached(maze: MazeGrid) -> Optional[float]:
     """Compute optimal cost C* from start to goal. Returns None if unreachable."""
     if maze.start == maze.goal:
         return 0.0
@@ -36,6 +43,11 @@ def dijkstra_optimal_cost(maze: MazeGrid) -> Optional[float]:
                 heapq.heappush(pq, (new_d, counter, nb))
 
     return None
+
+
+def dijkstra_optimal_cost(maze: MazeGrid) -> Optional[float]:
+    """Compute and memoise optimal cost for an immutable maze snapshot."""
+    return _dijkstra_cached(maze.rows, maze.cols, tuple(maze.cells), maze.start, maze.goal, maze.diagonal)
 
 
 def is_reachable(maze: MazeGrid) -> bool:

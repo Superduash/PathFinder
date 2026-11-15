@@ -25,9 +25,9 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
 
   return (
     <div className="w-full flex flex-col gap-2 p-3 bg-surface border border-border rounded-xl shadow-xs select-none">
-      <div className="flex items-center justify-between pb-1 border-b border-border text-[11px] text-muted font-bold uppercase tracking-wider">
+      <div className="flex items-center justify-between pb-1 border-b border-border text-xs text-muted font-bold uppercase tracking-wider">
         <span>Race Statistics</span>
-        <span className="text-[10px] lowercase font-normal">
+        <span className="text-xs lowercase font-normal">
           * search time is server compute effort
         </span>
       </div>
@@ -102,12 +102,12 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                     {meta.short}
                   </span>
                   {s.heuristic && (
-                    <span className="text-[10px] text-muted">({s.heuristic})</span>
+                    <span className="text-xs text-muted">({s.heuristic})</span>
                   )}
                 </div>
 
                 {isWinner ? (
-                  <span className="flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-brand text-brand-ink uppercase">
+                  <span className="flex items-center gap-0.5 px-1.5 py-0.2 rounded text-xs font-bold bg-brand text-brand-ink uppercase">
                     <Trophy className="w-2.5 h-2.5 fill-current" />
                     <span>Win</span>
                   </span>
@@ -116,12 +116,12 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                 ) : s.status === "failed" ? (
                   <AlertCircle className="w-3.5 h-3.5 text-danger" />
                 ) : (
-                  <span className="text-[10px] text-muted">{s.status}</span>
+                  <span className="text-xs text-muted">{s.status}</span>
                 )}
               </div>
 
               {/* Metrics Grid */}
-              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] py-1 border-t border-border/60">
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs py-1 border-t border-border/60">
                 <div className="flex justify-between">
                   <span className="text-muted">Checked:</span>
                   <span className="font-mono font-bold text-text">{s.expanded}</span>
@@ -145,7 +145,7 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
               </div>
 
               {/* Optimality & Timing */}
-              <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[10px] text-muted">
+              <div className="flex items-center justify-between pt-1 border-t border-border/40 text-xs text-muted">
                 <span>
                   Opt:{" "}
                   <strong className="text-text">

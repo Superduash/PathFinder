@@ -17,6 +17,25 @@ import { request } from "@/lib/api";
 import { notify } from "@/lib/notify";
 import type { Maze } from "@/lib/types";
 
+const CFG_KEY = "pathfinder-maze-config-v5";
+const GEN_TYPES = ["loops", "backtracker", "random", "empty"];
+const DEFAULT_MAZE_CONFIG: MazeConfig = {
+  rows: 21, cols: 21, genType: "loops", density: 0.25, diagonal: false,
+  weighted: true, weightFraction: 0.25, loopFraction: 0.25,
+  terrainStyle: "blobs", ensureSolvable: true, seed: 42,
+};
+const clamp = (value: unknown, min: number, max: number) => Math.min(max, Math.max(min, Number(value) || min));
+function loadMazeConfig(): MazeConfig {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CFG_KEY) ?? "null");
+    if (raw && GEN_TYPES.includes(raw.genType)) {
+      return { ...DEFAULT_MAZE_CONFIG, ...raw, rows: clamp(raw.rows, 5, 60), cols: clamp(raw.cols, 5, 60) };
+    }
+  } catch {}
+  localStorage.removeItem("pathfinder-maze-config");
+  return { ...DEFAULT_MAZE_CONFIG };
+}
+
 export const VisualizerPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const {
@@ -52,25 +71,7 @@ export const VisualizerPage: React.FC = () => {
   const [heuristicMap, setHeuristicMap] = useState<number[] | null>(null);
 
   const [mazeConfig, setMazeConfig] = useState<MazeConfig>(() => {
-    const saved = localStorage.getItem("pathfinder-maze-config");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {}
-    }
-    return {
-      rows: 21,
-      cols: 21,
-      genType: "loops",
-      density: 0.25,
-      diagonal: false,
-      weighted: true,
-      weightFraction: 0.25,
-      loopFraction: 0.25,
-      terrainStyle: "blobs",
-      ensureSolvable: true,
-      seed: 42,
-    };
+    return loadMazeConfig();
   });
 
   const {
@@ -123,7 +124,7 @@ export const VisualizerPage: React.FC = () => {
   }, [showHintMap]);
 
   useEffect(() => {
-    localStorage.setItem("pathfinder-maze-config", JSON.stringify(mazeConfig));
+    localStorage.setItem(CFG_KEY, JSON.stringify(mazeConfig));
   }, [mazeConfig]);
 
   // First-visit interactive tour
@@ -441,7 +442,7 @@ export const VisualizerPage: React.FC = () => {
               <div className="w-full max-w-[580px] aspect-square rounded-xl overflow-hidden border border-border shadow-xs bg-bg relative">
                 <canvas ref={canvasRef} className="w-full h-full block cursor-crosshair" {...handlers} />
               </div>
-              <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-surface-2 border border-border text-[11px] text-muted font-medium select-none">
+              <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-surface-2 border border-border text-xs text-muted font-medium select-none">
                 Click & drag to draw · Switch to Race View to compare
               </div>
             </div>
@@ -509,6 +510,8 @@ export const VisualizerPage: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         config={mazeConfig}
+        onResetDefaults={() => setMazeConfig({ ...DEFAULT_MAZE_CONFIG })}
+        defaultConfig={DEFAULT_MAZE_CONFIG}
         onApply={(newCfg) => {
           setMazeConfig(newCfg);
           handleGenerate(newCfg);

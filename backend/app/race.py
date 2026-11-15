@@ -18,13 +18,19 @@ class ParticipantSession:
         self.search: BaseSearch = create_search(self.algorithm, maze, heuristic=self.heuristic)
         self.accumulated_compute_s: float = 0.0
         self.last_cell: Optional[tuple[int, int]] = None
+        self.tick_expanded: list[tuple[int, int]] = []
+        self.tick_discovered: list[tuple[int, int]] = []
 
     def step_k(self, k: int) -> bool:
         """Run up to k expansions, accumulating search compute time."""
         t0 = time.perf_counter()
         steps = 0
+        self.tick_expanded = []
+        self.tick_discovered = []
         while steps < k and self.search.status in ("init", "running"):
             done = self.search.step()
+            self.tick_expanded.extend(self.search.delta_expanded)
+            self.tick_discovered.extend(self.search.delta_discovered)
             steps += 1
             if done:
                 break
@@ -34,8 +40,8 @@ class ParticipantSession:
         if hasattr(self.search, 'currents'):
             # BDS: use forward side as primary current for compatibility
             self.last_cell = self.search.currents.get("forward")
-        elif self.search.delta_expanded:
-            self.last_cell = self.search.delta_expanded[-1]
+        elif self.tick_expanded:
+            self.last_cell = self.tick_expanded[-1]
 
         return self.search.status in ("found", "failed")
 
@@ -44,8 +50,8 @@ class ParticipantSession:
         opt = compute_optimality(c_star, s.path_cost) if s.path_cost is not None else None
         path_list = [list(pt) for pt in s.path] if s.path else None
 
-        delta_exp = [list(pt) for pt in s.delta_expanded] if is_update else None
-        delta_disc = [list(pt) for pt in s.delta_discovered] if is_update else None
+        delta_exp = [list(pt) for pt in self.tick_expanded] if is_update else None
+        delta_disc = [list(pt) for pt in self.tick_discovered] if is_update else None
         curr = list(self.last_cell) if (is_update and self.last_cell and s.status in ("init", "running")) else None
 
         # Phase 3.2: Build currents array for BDS two-sided visualization
@@ -63,8 +69,8 @@ class ParticipantSession:
         note = None
         if narrate and is_update and s.status in ("init", "running"):
             # Phase 3.2: BDS needs per-side narration
-            if hasattr(s, 'currents') and hasattr(s, 'current_side'):
-                side = s.current_side
+            if hasattr(s, 'currents') and hasattr(s, 'last_side'):
+                side = s.last_side
                 cell = s.currents.get(side)
                 if cell:
                     dist = None
@@ -87,7 +93,7 @@ class ParticipantSession:
             info = []
             cols = s.maze.cols
             # Phase 1.3/1.4: Build info from ordered lists (B4) with per-cell order (B1)
-            reported = list(s.delta_expanded) + list(s.delta_discovered)
+            reported = list(self.tick_discovered) + list(self.tick_expanded)
             for cell in reported:
                 idx = cell[0] * cols + cell[1]
                 g_val = s.g_costs.get(cell, 0.0) if hasattr(s, "g_costs") else 0.0
@@ -203,6 +209,10 @@ class RaceSession:
         for p in self.participants:
             if p.search.status in ("init", "running"):
                 p.step_k(k)
+            else:
+                # Do not resend the previous tick's deltas after this racer finishes.
+                p.tick_expanded = []
+                p.tick_discovered = []
             if p.search.status in ("init", "running"):
                 all_done = False
 

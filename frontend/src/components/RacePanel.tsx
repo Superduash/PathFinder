@@ -75,18 +75,18 @@ export const RacePanel: React.FC<RacePanelProps> = ({
             {visual.short}
           </span>
           {stats.heuristic && (
-            <span className="text-muted text-[11px] truncate">({stats.heuristic})</span>
+            <span className="text-muted text-xs truncate">({stats.heuristic})</span>
           )}
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isWinner && (
-            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-brand text-brand-ink uppercase tracking-wide">
+            <span className="px-1.5 py-0.2 rounded text-xs font-bold bg-brand text-brand-ink uppercase tracking-wide">
               WINNER
             </span>
           )}
           <span
-            className={`px-1.5 py-0.2 rounded text-[11px] font-medium ${
+            className={`px-1.5 py-0.2 rounded text-xs font-medium ${
               stats.status === "found"
                 ? "bg-success/15 text-success"
                 : stats.status === "failed"

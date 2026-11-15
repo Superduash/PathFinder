@@ -72,7 +72,7 @@ export const RacerPicker: React.FC<RacerPickerProps> = ({
                 }))
               )
             }
-            className="text-[11px] text-brand hover:underline"
+            className="text-xs text-brand hover:underline"
           >
             All
           </button>
@@ -80,7 +80,7 @@ export const RacerPicker: React.FC<RacerPickerProps> = ({
           <button
             type="button"
             onClick={() => onChange([{ algorithm: "bfs" }, { algorithm: "astar", heuristic: "manhattan" }])}
-            className="text-[11px] text-muted hover:text-text"
+            className="text-xs text-muted hover:text-text"
           >
             Reset
           </button>
@@ -116,7 +116,7 @@ export const RacerPicker: React.FC<RacerPickerProps> = ({
                   />
                   <div>
                     <div className="font-bold text-xs text-text">{visual.short}</div>
-                    <div className="text-[10px] text-muted">{visual.fullName}</div>
+                    <div className="text-xs text-muted">{visual.fullName}</div>
                   </div>
                 </div>
                 <input
@@ -129,11 +129,11 @@ export const RacerPicker: React.FC<RacerPickerProps> = ({
 
               {active && hasHeuristic && (
                 <div className="pt-1.5 border-t border-border/40 mt-1">
-                  <label className="text-[10px] text-muted block mb-0.5">Hint:</label>
+                  <label className="text-xs text-muted block mb-0.5">Hint:</label>
                   <select
                     value={participant?.heuristic || "manhattan"}
                     onChange={(e) => updateHeuristic(algId, e.target.value)}
-                    className="w-full bg-surface-2 border border-border text-[11px] rounded px-1.5 py-0.5 text-text"
+                    className="w-full bg-surface-2 border border-border text-xs rounded px-1.5 py-0.5 text-text"
                   >
                     {HEURISTIC_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -142,7 +142,7 @@ export const RacerPicker: React.FC<RacerPickerProps> = ({
                     ))}
                   </select>
                   {participant?.heuristic === "manhattan" && diagonal && (
-                    <span className="text-[9px] text-amber-500 block mt-0.5">
+                    <span className="text-xs text-amber-500 block mt-0.5">
                       ⚠️ Inadmissible with diagonals
                     </span>
                   )}

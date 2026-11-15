@@ -72,7 +72,7 @@ export const PresetsPopover: React.FC<PresetsPopoverProps> = ({
       {isOpen && (
         <div className="absolute left-0 mt-2 w-80 sm:w-96 p-3 bg-surface border border-border rounded-xl shadow-xl z-50 flex flex-col gap-2">
           <div className="flex items-center justify-between pb-1 border-b border-border">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted">
               Choose Preset Maze
             </span>
           </div>
@@ -97,7 +97,7 @@ export const PresetsPopover: React.FC<PresetsPopoverProps> = ({
                     <span>{p.name}</span>
                     {isSelected && <Check className="w-3 h-3 text-brand" />}
                   </div>
-                  <span className="text-[10px] text-muted line-clamp-2 mt-0.5 leading-tight">
+                  <span className="text-xs text-muted line-clamp-2 mt-0.5 leading-tight">
                     {p.desc}
                   </span>
                 </button>

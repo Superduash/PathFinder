@@ -122,7 +122,7 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
         </button>
 
         {stepsCount > 0 && (
-          <span className="text-[11px] font-mono font-medium text-muted px-1.5">
+          <span className="text-xs font-mono font-medium text-muted px-1.5">
             Step {stepsCount}
           </span>
         )}
@@ -134,7 +134,7 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
 
       {/* Speed Multiplier Segmented Control (§5.1) */}
       <div id="speed-step" className="flex items-center gap-1 bg-surface-2 p-0.5 rounded-lg border border-border">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted px-2">
           Speed
         </span>
         {SPEED_OPTIONS.map((opt) => {
@@ -157,7 +157,7 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
 
       {/* Numbers / Cell Overlay Control (§4.3) */}
       <div id="overlay-step" className="flex items-center gap-1 bg-surface-2 p-0.5 rounded-lg border border-border">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted px-2">
           Show
         </span>
         {OVERLAY_OPTIONS.map((opt) => {

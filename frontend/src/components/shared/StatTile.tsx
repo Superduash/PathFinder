@@ -28,13 +28,13 @@ export const StatTile: React.FC<StatTileProps> = ({
           {value}
         </span>
         {badge && (
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${badgeColor}`}>
+          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${badgeColor}`}>
             {badge}
           </span>
         )}
       </div>
       {sublabel && (
-        <span className="text-[11px] text-muted leading-tight">{sublabel}</span>
+        <span className="text-xs text-muted leading-tight">{sublabel}</span>
       )}
     </div>
   );

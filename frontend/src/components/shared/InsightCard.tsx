@@ -23,7 +23,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-bold text-text">{title}</span>
           {tag && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface border border-border text-muted">
+            <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-surface border border-border text-muted">
               {tag}
             </span>
           )}

@@ -30,6 +30,7 @@ class BidirectionalSearch:
         self.closed_b: set[tuple[int, int]] = set()
 
         self.current_side: str = "forward"  # alternates: "forward" | "backward"
+        self.last_side: Optional[str] = None
         self.best_moves: float = float("inf")
         self.meeting_cell: Optional[tuple[int, int]] = None
 
@@ -109,6 +110,7 @@ class BidirectionalSearch:
         self.trace.append(curr)
         self.delta_expanded.append(curr)
         self.cell_sides[curr] = "forward" if is_forward else "backward"
+        self.last_side = "forward" if is_forward else "backward"
         
         # Phase 1.5: Track current cell for each side
         self.currents["forward" if is_forward else "backward"] = curr

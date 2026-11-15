@@ -669,19 +669,19 @@ export const BenchmarkPage: React.FC = () => {
                       <tr key={run.id} className="border-b border-border/50 hover:bg-surface-2/40">
                         <td className="p-3">
                           <div className="font-bold text-text">#{run.id}</div>
-                          <div className="text-[10px] text-muted">{run.created_at || "—"}</div>
+                          <div className="text-xs text-muted">{run.created_at || "—"}</div>
                         </td>
                         <td className="p-3 font-bold text-brand">{run.mazes_total || run.mazes_count || "—"}</td>
                         <td className="p-3 text-text">{run.repeats || 1}×</td>
                         <td className="p-3">
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold">
                             Completed
                           </span>
                         </td>
                         <td className="p-3">
                           <button
                             onClick={() => window.open(`/api/benchmark/runs/${run.id}/csv?table=summary`, "_blank")}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface border border-border text-[11px] text-brand hover:brightness-110"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface border border-border text-xs text-brand hover:brightness-110"
                           >
                             <Download className="w-3 h-3" /> Export CSV
                           </button>

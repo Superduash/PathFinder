@@ -131,7 +131,7 @@ export const Legend: React.FC = () => {
     <div className="w-full p-2.5 rounded-xl border border-border bg-surface flex flex-wrap items-center justify-between gap-3 text-xs">
       <div className="flex items-center gap-1.5 text-muted font-medium">
         <Info className="w-3.5 h-3.5 text-brand" />
-        <span className="text-[11px] uppercase tracking-wider font-semibold">Legend:</span>
+        <span className="text-xs uppercase tracking-wider font-semibold">Legend:</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -162,7 +162,7 @@ export const Legend: React.FC = () => {
 
             {/* Hover Explainer Tooltip */}
             {activeTooltip === item.id && (
-              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 rounded-lg border border-border bg-surface-2 text-text text-[11px] shadow-lg whitespace-nowrap">
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 rounded-lg border border-border bg-surface-2 text-text text-xs shadow-lg whitespace-nowrap">
                 {item.desc}
               </div>
             )}

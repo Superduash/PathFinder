@@ -277,13 +277,15 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
   };
 
   const stepRace = () => {
-    if (!socketRef.current) return;
-    if (raceState === "idle" || raceState === "finished") {
+    if (!socketRef.current || raceState === "finished" || inFlightRef.current) return;
+    if (raceState === "idle") {
       initRace();
+      inFlightRef.current = true;
       setTimeout(() => {
         socketRef.current?.send({ type: "race.step", k: 1 });
       }, 100);
     } else {
+      inFlightRef.current = true;
       socketRef.current.send({ type: "race.step", k: 1 });
     }
   };

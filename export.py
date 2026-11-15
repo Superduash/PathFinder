@@ -42,6 +42,7 @@ PRIORITY_FILES = [
     "frontend/src/styles/tokens.css",
     "frontend/src/styles/globals.css",
     "scripts/verify_behavior.py",
+    "scripts/demo_check.py",
     "scripts/check_contrast.ts",
     "scripts/check_contrast.mjs",
 ]
