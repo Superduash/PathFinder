@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -22,6 +22,7 @@ import { notify } from "@/lib/notify";
 import { RacerPicker } from "@/components/shared/RacerPicker";
 import { useBenchmarkRunsQuery } from "@/lib/queries";
 import type { CompareResult, BenchmarkConfig } from "@/lib/types";
+import type { MethodologyResponse } from "@/lib/api-types";
 
 const PRESET_BENCHMARKS = [
   { id: "quick", name: "Quick Test", desc: "2 sizes × 2 mazes each", sizes: [{ rows: 15, cols: 15 }, { rows: 21, cols: 21 }], count: 2, repeats: 1 },
@@ -44,8 +45,31 @@ export const BenchmarkPage: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState("quick");
   const [batchJobId, setBatchJobId] = useState<string | null>(null);
   const [ensureSolvable, setEnsureSolvable] = useState(true);
+  const [estimate, setEstimate] = useState<{ mazes_total: number; runs_total: number; est_seconds_low: number; est_seconds_high: number } | null>(null);
+  const [methodology, setMethodology] = useState<MethodologyResponse | null>(null);
 
   const { status: jobStatus, progress, result: batchResult, cancel } = useJob(batchJobId);
+
+  useEffect(() => {
+    const preset = PRESET_BENCHMARKS.find((item) => item.id === selectedPreset) || PRESET_BENCHMARKS[0];
+    const config = {
+      sizes: preset.sizes,
+      densities: [0.2, 0.3],
+      types: ["backtracker", "random"],
+      mazes_per_config: preset.count,
+      participants,
+      repeats: preset.repeats,
+    };
+    request<typeof estimate>("/api/benchmark/estimate", { method: "POST", body: JSON.stringify(config) })
+      .then((value) => setEstimate(value))
+      .catch(() => setEstimate(null));
+  }, [selectedPreset, participants]);
+
+  useEffect(() => {
+    request<MethodologyResponse>("/api/meta/methodology")
+      .then(setMethodology)
+      .catch(() => setMethodology(null));
+  }, []);
 
   const handleRunSingle = async () => {
     if (!maze) {
@@ -208,6 +232,7 @@ export const BenchmarkPage: React.FC = () => {
                     >
                       <span className="font-bold text-base text-text block">{preset.name}</span>
                       <span className="text-xs text-muted block mt-1">{preset.desc}</span>
+                      {estimate && selectedPreset === preset.id && <span className="text-sm text-brand block mt-3">{estimate.mazes_total} mazes · {estimate.runs_total} runs · {Math.round(estimate.est_seconds_low)}-{Math.round(estimate.est_seconds_high)}s</span>}
                     </div>
                   ))}
                 </div>
@@ -216,6 +241,7 @@ export const BenchmarkPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Switch checked={ensureSolvable} onCheckedChange={setEnsureSolvable} />
                     <span className="text-sm font-medium text-text">Ensure all mazes are solvable</span>
+                    <span className="text-sm text-muted">Regenerates up to 50 tries so every maze has a route.</span>
                   </div>
                   <Button onClick={() => setWizardStep(2)} className="gap-1.5 font-semibold">
                     Next: Confirm Racers <ChevronRight className="w-4 h-4" />
@@ -446,6 +472,13 @@ export const BenchmarkPage: React.FC = () => {
                       </div>
                     </CardContent>
                   </Card>
+
+                  {methodology && <Card>
+                    <CardHeader><CardTitle>Methodology</CardTitle><CardDescription>How these measurements are produced.</CardDescription></CardHeader>
+                    <CardContent className="grid md:grid-cols-2 gap-3 text-sm text-muted">
+                      {Object.entries(methodology).map(([key, value]) => <p key={key}><strong className="text-text capitalize">{key}: </strong>{value}</p>)}
+                    </CardContent>
+                  </Card>}
 
                   {/* Summary Table */}
                   <Card>

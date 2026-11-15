@@ -179,28 +179,32 @@ PRESET_METADATA = {
         "name": "Open Field",
         "description": "Empty 15×15 grid, start to goal diagonal",
         "lesson": "Hints shine: A* ≈ Greedy ≪ BFS=UCS",
-        "expect": "A* checks ≤40 cells, BFS checks ≥200"
+        "expect": "A* checks ≤40 cells, BFS checks ≥200",
+        "difficulty": "Easy",
     },
     "wall_with_gap": {
         "key": "wall_with_gap",
         "name": "Wall with Gap",
         "description": "Long wall with single opening",
         "lesson": "A* needs fewer cells than UCS",
-        "expect": "A* < 0.6 × UCS expansions"
+        "expect": "A* < 0.6 × UCS expansions",
+        "difficulty": "Medium",
     },
     "greedy_trap": {
         "key": "greedy_trap",
         "name": "Greedy Trap",
         "description": "Vertical walls with doors at bottom",
         "lesson": "Greedy gets fooled, A* doesn't",
-        "expect": "Greedy cost > 1.4 × optimal, A* cost = optimal"
+        "expect": "Greedy cost > 1.4 × optimal, A* cost = optimal",
+        "difficulty": "Hard",
     },
     "weighted_river": {
         "key": "weighted_river",
         "name": "Weighted River",
         "description": "Water barrier with sand bridge",
         "lesson": "UCS/A* beat BFS on cost; BFS = fewest steps",
-        "expect": "BFS cost > UCS cost, BFS moves ≤ UCS moves"
+        "expect": "BFS cost > UCS cost, BFS moves ≤ UCS moves",
+        "difficulty": "Medium",
     },
     "two_routes": {
         "key": "two_routes",

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTheme } from "next-themes";
 import { Trophy, CheckCircle2, AlertCircle } from "lucide-react";
 import { ALGORITHM_VISUALS, getAlgorithmColor } from "@/lib/palette";
@@ -8,15 +8,18 @@ interface ResultStripProps {
   stats: ParticipantStats[];
   winnerIdx: number | null;
   maxExpandedSeen: number;
+  summary?: { explanations?: string[]; route_groups?: { ids: number[]; same_route: boolean; label: string }[] } | null;
 }
 
 export const ResultStrip: React.FC<ResultStripProps> = ({
   stats,
   winnerIdx,
   maxExpandedSeen,
+  summary,
 }) => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme !== "light";
+  const [compareRoutes, setCompareRoutes] = useState(false);
 
   if (!stats || stats.length === 0) return null;
 
@@ -28,6 +31,45 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
           * search time is server compute effort
         </span>
       </div>
+
+      {summary && (summary.explanations?.length || summary.route_groups?.length) ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm" aria-live="polite">
+          <button type="button" onClick={() => setCompareRoutes((open) => !open)} className="px-3 py-1.5 rounded-md border border-brand/40 text-brand font-semibold">
+            {compareRoutes ? "Hide route comparison" : "Compare routes"}
+          </button>
+          {summary.route_groups?.filter((group) => group.same_route).map((group) => (
+            <span key={group.ids.join(",")} className="px-2.5 py-1 rounded-full border border-border bg-surface-2 text-muted">
+              {group.label} = same route
+            </span>
+          ))}
+          {summary.explanations?.map((explanation) => (
+            <span key={explanation} className="text-text-2">{explanation}</span>
+          ))}
+        </div>
+      ) : null}
+
+      {compareRoutes && (
+        <div className="overflow-x-auto rounded-lg border border-border" aria-label="Route comparison">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-surface-2 text-muted">
+              <tr><th className="px-3 py-2">Algorithm</th><th className="px-3 py-2">Steps</th><th className="px-3 py-2">Cost</th><th className="px-3 py-2">Turns</th></tr>
+            </thead>
+            <tbody>
+              {stats.filter((stat) => stat.path?.length).map((stat) => {
+                const path = stat.path || [];
+                const turns = path.slice(2).reduce((count, cell, index) => {
+                  const previous = path[index + 1];
+                  const before = path[index];
+                  const firstDirection = [previous[0] - before[0], previous[1] - before[1]];
+                  const direction = [cell[0] - previous[0], cell[1] - previous[1]];
+                  return count + (firstDirection[0] !== direction[0] || firstDirection[1] !== direction[1] ? 1 : 0);
+                }, 0);
+                return <tr key={stat.algorithm} className="border-t border-border"><td className="px-3 py-2 font-semibold">{stat.algorithm.toUpperCase()}</td><td className="px-3 py-2 tabular-nums">{stat.pathLength ?? "-"}</td><td className="px-3 py-2 tabular-nums">{stat.pathCost ?? "-"}</td><td className="px-3 py-2 tabular-nums">{turns}</td></tr>;
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
         {stats.map((s, idx) => {

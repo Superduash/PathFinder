@@ -1,14 +1,20 @@
 /* PathFinder design tokens (Midnight Dark & Paper Light) */
 
 :root {
-  --bg: #FAFAF7;
+  --bg: #F5F7FB;
+  --bg-elev: #FFFFFF;
   --surface: #FFFFFF;
-  --surface-2: #F3F2EE;
-  --border: #E7E5DF;
-  --text: #14161B;
-  --muted: #5F6675;
-  --brand: #0D9488;
+  --surface-2: #EEF1F8;
+  --surface-3: #E3E8F3;
+  --border: #D9DFEC;
+  --border-strong: #BAC3D8;
+  --text: #0D1424;
+  --text-2: #36405A;
+  --muted: #56627F;
+  --brand: #0F766E;
+  --brand-fill: #14B8A6;
   --brand-ink: #FFFFFF;
+  --ring: rgba(15, 118, 110, 0.45);
   --warn: #D97706;
   --danger: #DC2626;
   --success: #16A34A;
@@ -30,14 +36,20 @@
 }
 
 .dark {
-  --bg: #0A0D14;
+  --bg: #090D17;
+  --bg-elev: #0E1424;
   --surface: #11151F;
-  --surface-2: #171C28;
-  --border: #232A3A;
-  --text: #F2F4F8;
-  --muted: #8B94A7;
+  --surface: #121A2C;
+  --surface-2: #18223A;
+  --surface-3: #202C4A;
+  --border: #263256;
+  --border-strong: #37466F;
+  --text: #F4F6FB;
+  --text-2: #C2CBE0;
+  --muted: #8E9BBB;
   --brand: #2DD4BF;
   --brand-ink: #04201C;
+  --ring: rgba(45, 212, 191, 0.55);
   --warn: #FBBF24;
   --danger: #F87171;
   --success: #4ADE80;

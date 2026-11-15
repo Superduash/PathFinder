@@ -91,7 +91,7 @@
       },
       "astar": {
         "status": "found",
-        "expanded": 45,
+        "expanded": 44,
         "moves": 23,
         "cost": 23.0,
         "path_len": 24
@@ -115,46 +115,46 @@
     },
     "results": {
       "bfs": {
-        "status": "failed",
-        "expanded": 7,
-        "moves": 0,
-        "cost": 0.0,
-        "path_len": 0
+        "status": "found",
+        "expanded": 35,
+        "moves": 13,
+        "cost": 13.0,
+        "path_len": 14
       },
       "dfs": {
-        "status": "failed",
-        "expanded": 7,
-        "moves": 0,
-        "cost": 0.0,
-        "path_len": 0
+        "status": "found",
+        "expanded": 54,
+        "moves": 15,
+        "cost": 15.0,
+        "path_len": 16
       },
       "ucs": {
-        "status": "failed",
-        "expanded": 7,
-        "moves": 0,
-        "cost": 0.0,
-        "path_len": 0
+        "status": "found",
+        "expanded": 35,
+        "moves": 13,
+        "cost": 13.0,
+        "path_len": 14
       },
       "greedy": {
-        "status": "failed",
-        "expanded": 7,
-        "moves": 0,
-        "cost": 0.0,
-        "path_len": 0
+        "status": "found",
+        "expanded": 14,
+        "moves": 13,
+        "cost": 13.0,
+        "path_len": 14
       },
       "astar": {
-        "status": "failed",
-        "expanded": 7,
-        "moves": 0,
-        "cost": 0.0,
-        "path_len": 0
+        "status": "found",
+        "expanded": 14,
+        "moves": 13,
+        "cost": 13.0,
+        "path_len": 14
       },
       "bds": {
-        "status": "failed",
-        "expanded": 52,
-        "moves": 0,
-        "cost": 0.0,
-        "path_len": 0
+        "status": "found",
+        "expanded": 26,
+        "moves": 13,
+        "cost": 13.0,
+        "path_len": 14
       }
     }
   },
@@ -169,45 +169,45 @@
     "results": {
       "bfs": {
         "status": "found",
-        "expanded": 67,
-        "moves": 11,
-        "cost": 19.0,
-        "path_len": 12
+        "expanded": 41,
+        "moves": 15,
+        "cost": 23.0,
+        "path_len": 16
       },
       "dfs": {
         "status": "found",
-        "expanded": 32,
-        "moves": 29,
-        "cost": 37.0,
-        "path_len": 30
+        "expanded": 25,
+        "moves": 15,
+        "cost": 23.0,
+        "path_len": 16
       },
       "ucs": {
         "status": "found",
-        "expanded": 73,
-        "moves": 11,
+        "expanded": 41,
+        "moves": 15,
         "cost": 19.0,
-        "path_len": 12
+        "path_len": 16
       },
       "greedy": {
         "status": "found",
-        "expanded": 12,
-        "moves": 11,
-        "cost": 19.0,
-        "path_len": 12
+        "expanded": 25,
+        "moves": 15,
+        "cost": 23.0,
+        "path_len": 16
       },
       "astar": {
         "status": "found",
-        "expanded": 57,
-        "moves": 11,
+        "expanded": 27,
+        "moves": 15,
         "cost": 19.0,
-        "path_len": 12
+        "path_len": 16
       },
       "bds": {
         "status": "found",
-        "expanded": 38,
-        "moves": 11,
-        "cost": 19.0,
-        "path_len": 12
+        "expanded": 39,
+        "moves": 15,
+        "cost": 23.0,
+        "path_len": 16
       }
     }
   },
@@ -222,45 +222,45 @@
     "results": {
       "bfs": {
         "status": "found",
-        "expanded": 48,
-        "moves": 22,
-        "cost": 22.0,
-        "path_len": 23
+        "expanded": 81,
+        "moves": 23,
+        "cost": 23.0,
+        "path_len": 24
       },
       "dfs": {
         "status": "found",
-        "expanded": 45,
-        "moves": 22,
-        "cost": 22.0,
-        "path_len": 23
+        "expanded": 39,
+        "moves": 33,
+        "cost": 33.0,
+        "path_len": 34
       },
       "ucs": {
         "status": "found",
-        "expanded": 48,
-        "moves": 22,
-        "cost": 22.0,
-        "path_len": 23
+        "expanded": 81,
+        "moves": 23,
+        "cost": 23.0,
+        "path_len": 24
       },
       "greedy": {
         "status": "found",
-        "expanded": 23,
-        "moves": 22,
-        "cost": 22.0,
-        "path_len": 23
+        "expanded": 26,
+        "moves": 23,
+        "cost": 23.0,
+        "path_len": 24
       },
       "astar": {
         "status": "found",
-        "expanded": 45,
-        "moves": 22,
-        "cost": 22.0,
-        "path_len": 23
+        "expanded": 38,
+        "moves": 23,
+        "cost": 23.0,
+        "path_len": 24
       },
       "bds": {
         "status": "found",
-        "expanded": 58,
-        "moves": 22,
-        "cost": 22.0,
-        "path_len": 23
+        "expanded": 73,
+        "moves": 23,
+        "cost": 23.0,
+        "path_len": 24
       }
     }
   },
@@ -328,44 +328,44 @@
     "results": {
       "bfs": {
         "status": "found",
-        "expanded": 81,
+        "expanded": 84,
         "moves": 11,
-        "cost": 15.8284,
+        "cost": 18.3137,
         "path_len": 12
       },
       "dfs": {
         "status": "found",
-        "expanded": 15,
-        "moves": 12,
-        "cost": 27.0416,
-        "path_len": 13
+        "expanded": 53,
+        "moves": 14,
+        "cost": 16.8995,
+        "path_len": 15
       },
       "ucs": {
         "status": "found",
-        "expanded": 76,
-        "moves": 11,
-        "cost": 11.8284,
-        "path_len": 12
+        "expanded": 81,
+        "moves": 12,
+        "cost": 13.2426,
+        "path_len": 13
       },
       "greedy": {
         "status": "found",
         "expanded": 13,
-        "moves": 11,
-        "cost": 21.4853,
-        "path_len": 12
+        "moves": 12,
+        "cost": 13.2426,
+        "path_len": 13
       },
       "astar": {
         "status": "found",
-        "expanded": 19,
-        "moves": 11,
-        "cost": 11.8284,
-        "path_len": 12
+        "expanded": 13,
+        "moves": 12,
+        "cost": 13.2426,
+        "path_len": 13
       },
       "bds": {
         "status": "found",
-        "expanded": 52,
+        "expanded": 50,
         "moves": 11,
-        "cost": 15.8284,
+        "cost": 18.3137,
         "path_len": 12
       }
     }
@@ -409,7 +409,7 @@
       },
       "astar": {
         "status": "found",
-        "expanded": 61,
+        "expanded": 54,
         "moves": 23,
         "cost": 23.0,
         "path_len": 24
@@ -434,45 +434,45 @@
     "results": {
       "bfs": {
         "status": "found",
-        "expanded": 23,
-        "moves": 10,
-        "cost": 10.0,
-        "path_len": 11
+        "expanded": 30,
+        "moves": 11,
+        "cost": 11.0,
+        "path_len": 12
       },
       "dfs": {
         "status": "found",
-        "expanded": 13,
-        "moves": 10,
-        "cost": 10.0,
-        "path_len": 11
+        "expanded": 24,
+        "moves": 19,
+        "cost": 19.0,
+        "path_len": 20
       },
       "ucs": {
         "status": "found",
-        "expanded": 23,
-        "moves": 10,
-        "cost": 10.0,
-        "path_len": 11
+        "expanded": 30,
+        "moves": 11,
+        "cost": 11.0,
+        "path_len": 12
       },
       "greedy": {
         "status": "found",
-        "expanded": 23,
-        "moves": 10,
-        "cost": 10.0,
-        "path_len": 11
+        "expanded": 12,
+        "moves": 11,
+        "cost": 11.0,
+        "path_len": 12
       },
       "astar": {
         "status": "found",
-        "expanded": 19,
-        "moves": 10,
-        "cost": 10.0,
-        "path_len": 11
+        "expanded": 12,
+        "moves": 11,
+        "cost": 11.0,
+        "path_len": 12
       },
       "bds": {
         "status": "found",
-        "expanded": 18,
-        "moves": 10,
-        "cost": 10.0,
-        "path_len": 11
+        "expanded": 22,
+        "moves": 11,
+        "cost": 11.0,
+        "path_len": 12
       }
     }
   },

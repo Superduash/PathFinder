@@ -138,6 +138,11 @@ class ParticipantSession:
 
 class RaceSession:
     def __init__(self, race_id: str, maze: MazeGrid, participants: list[dict], narrate: bool = True, show_values: bool = False) -> None:
+        if not participants or len(participants) > 6:
+            raise ApiError("INVALID_PARAMS", "A race requires between 1 and 6 participants.")
+        participant_ids = [str(p.get("id", i)) for i, p in enumerate(participants)]
+        if len(set(participant_ids)) != len(participant_ids):
+            raise ApiError("INVALID_PARAMS", "Race participants must have unique ids.")
         self.race_id = race_id
         self.maze = maze
         self.c_star = dijkstra_optimal_cost(maze)
@@ -219,13 +224,45 @@ class RaceSession:
         def rank_key(idx: int):
             p = self.participants[idx].search
             status_order = 0 if p.status == "found" else 1
+            optimal_order = 0 if compute_optimality(self.c_star, p.path_cost) == 1.0 else 1
             cost = p.path_cost if p.path_cost is not None else float("inf")
-            return (status_order, p.expanded_count, cost)
+            return (status_order, optimal_order, p.expanded_count, cost)
 
         indices.sort(key=rank_key)
         states = [p.to_state(self.c_star, is_update=False, narrate=False) for p in self.participants]
 
-        # Generate insights and winner reason
+        found = [i for i, p in enumerate(self.participants) if p.search.status == "found"]
+        optimal = [i for i in found if compute_optimality(self.c_star, self.participants[i].search.path_cost) == 1.0]
+        fewest = min(found, key=lambda i: self.participants[i].search.expanded_count) if found else None
+        fastest = min(found, key=lambda i: self.participants[i].accumulated_compute_s) if found else None
+
+        awards = {
+            "fewest_checked": {
+                "id": fewest,
+                "value": self.participants[fewest].search.expanded_count if fewest is not None else None,
+            },
+            "shortest_route": {
+                "ids": optimal,
+                "cost": self.c_star if optimal else None,
+            },
+            "fastest_search": {
+                "id": fastest,
+                "ms": round(self.participants[fastest].accumulated_compute_s * 1000, 3) if fastest is not None else None,
+                "within_noise": self._fastest_is_within_noise(found, fastest),
+            },
+        }
+        best = optimal if optimal else []
+        best_id = min(best, key=lambda i: (self.participants[i].search.expanded_count,
+                                           self.participants[i].search.path_cost or float("inf"))) if best else None
+        awards["best_overall"] = {
+            "id": best_id,
+            "reason": self._best_reason(best_id, optimal),
+        }
+
+        route_groups = self._route_groups(found)
+        explanations = self._explanations(found, optimal, route_groups)
+
+        # Generate insights and compatibility winner text
         insights = []
         winner_reason = ""
 
@@ -237,28 +274,17 @@ class RaceSession:
                 "text": "No route exists between start and goal in this maze.",
             })
             winner_reason = "No path exists between start and goal."
-        elif indices:
-            winner_idx = indices[0]
-            winner = self.participants[winner_idx]
-            w_search = winner.search
-
-            if w_search.status == "found":
-                w_name = winner.algorithm.upper()
-                if len(indices) > 1:
-                    runner_up = self.participants[indices[1]].search
-                    if runner_up.expanded_count > w_search.expanded_count:
-                        pct = round((1.0 - w_search.expanded_count / max(1, runner_up.expanded_count)) * 100)
-                        winner_reason = f"{w_name} won: checked {pct}% fewer cells than runner-up."
-                        insights.append({
-                            "id": "winner_efficiency",
-                            "tone": "good",
-                            "title": "Search Efficiency",
-                            "text": f"{w_name} inspected {pct}% fewer cells to discover an optimal route.",
-                        })
-                    else:
-                        winner_reason = f"{w_name} won with optimal path cost {w_search.path_cost:.1f}."
-                else:
-                    winner_reason = f"{w_name} found a valid route."
+        elif best_id is not None:
+            winner = self.participants[best_id]
+            winner_reason = awards["best_overall"]["reason"]
+            insights.append({
+                "id": "best_overall",
+                "tone": "good",
+                "title": "Best overall",
+                "text": winner_reason,
+            })
+        elif found:
+            winner_reason = "No racer found a shortest route."
 
         return RaceSummaryMessage(
             raceId=self.race_id,
@@ -268,4 +294,56 @@ class RaceSession:
             winner_reason=winner_reason,
             reachable=(self.c_star is not None),
             optimal_cost=self.c_star,
+            awards=awards,
+            route_groups=route_groups,
+            explanations=explanations,
         )
+
+    def _fastest_is_within_noise(self, found: list[int], fastest: Optional[int]) -> bool:
+        if fastest is None or len(found) < 2:
+            return False
+        fastest_ms = self.participants[fastest].accumulated_compute_s * 1000
+        others = [self.participants[i].accumulated_compute_s * 1000 for i in found if i != fastest]
+        gap = min(others) - fastest_ms
+        return gap < 1.0 or gap / max(min(others), 1e-9) < 0.2
+
+    def _best_reason(self, best_id: Optional[int], optimal: list[int]) -> str:
+        if best_id is None:
+            return "No racer found a shortest route."
+        name = self.participants[best_id].algorithm.upper()
+        if len(optimal) == 1:
+            return f"{name} found a shortest route with the fewest cells checked."
+        return f"{name} shared a shortest route and checked the fewest cells among optimal racers."
+
+    def _route_groups(self, found: list[int]) -> list[dict]:
+        groups: dict[tuple, list[int]] = {}
+        for idx in found:
+            path = tuple(tuple(cell) for cell in (self.participants[idx].search.path or []))
+            groups.setdefault(path, []).append(idx)
+        result = []
+        for ids in groups.values():
+            names = " and ".join(self.participants[i].algorithm.upper() for i in ids)
+            result.append({"ids": ids, "same_route": len(ids) > 1, "label": names})
+        return result
+
+    def _explanations(self, found: list[int], optimal: list[int], route_groups: list[dict]) -> list[str]:
+        explanations: list[str] = []
+        cycles = self.maze.meta.get("cycles")
+        if cycles == 0:
+            explanations.append("This maze has exactly one route (a 'perfect maze'), so every algorithm found the same one. They differ only in how many cells they checked.")
+        has_terrain = any(cell in (2, 3) for cell in self.maze.cells)
+        bfs = next((i for i in found if self.participants[i].algorithm == "bfs"), None)
+        ucs = next((i for i in found if self.participants[i].algorithm == "ucs"), None)
+        if bfs is not None and ucs is not None:
+            if not has_terrain:
+                explanations.append("BFS and UCS behave the same when every step costs 1. Add sand or water to see UCS choose cheaper routes.")
+            elif self.participants[bfs].search.path_cost != self.participants[ucs].search.path_cost:
+                delta = abs((self.participants[bfs].search.path_cost or 0) - (self.participants[ucs].search.path_cost or 0))
+                explanations.append(f"BFS minimises steps; UCS minimises cost — UCS's route is {delta:g} cost cheaper.")
+        greedy = next((i for i in found if self.participants[i].algorithm == "greedy"), None)
+        if greedy is not None and self.c_star and (self.participants[greedy].search.path_cost or 0) > self.c_star:
+            pct = round(((self.participants[greedy].search.path_cost / self.c_star) - 1) * 100)
+            explanations.append(f"Greedy followed the hint into a dead end; its route is {pct}% longer.")
+        if any(self.participants[i].algorithm == "bds" for i in found):
+            explanations.append("The two waves met in the middle; BDS ignores terrain, so its route cost may be higher than UCS.")
+        return explanations[:3]

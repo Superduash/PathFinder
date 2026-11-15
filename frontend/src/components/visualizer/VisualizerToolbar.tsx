@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { PresetsPopover } from "./PresetsPopover";
 import type { OverlayMode } from "@/hooks/useMazeCanvas";
+import { deriveUiState } from "@/lib/raceUi";
 
 interface VisualizerToolbarProps {
   raceState: "idle" | "ready" | "running" | "paused" | "finished" | "disconnected";
@@ -74,6 +75,8 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
   disabled = false,
 }) => {
   const isRunning = raceState === "running";
+  const uiState = deriveUiState({ socketStatus: raceState === "disconnected" ? "offline" : "open", raceState });
+  const statusLabel = uiState === "offline" ? "Offline - Retry" : uiState === "running" ? "Searching..." : uiState === "paused" ? "Paused" : uiState === "finished" ? "Finished" : "Ready";
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-surface border border-border rounded-xl shadow-xs select-none">
@@ -90,6 +93,8 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
         ) : (
           <button
             onClick={onStart}
+            disabled={disabled || uiState === "offline"}
+            title={uiState === "offline" ? "The search server is offline" : "Start the race"}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-brand hover:brightness-110 text-brand-ink font-bold text-xs shadow-xs transition-all"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
@@ -99,7 +104,7 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
 
         <button
           onClick={onStep}
-          disabled={isRunning}
+          disabled={isRunning || disabled || uiState === "offline"}
           title="Step one expansion"
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text text-xs font-semibold disabled:opacity-40 transition-colors shadow-2xs"
         >
@@ -122,6 +127,10 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
           </span>
         )}
       </div>
+
+      <span className={`px-3 py-1.5 rounded-full border text-sm font-semibold ${uiState === "offline" ? "border-danger/40 text-danger" : "border-border text-muted"}`}>
+        {statusLabel}
+      </span>
 
       {/* Speed Multiplier Segmented Control (§5.1) */}
       <div id="speed-step" className="flex items-center gap-1 bg-surface-2 p-0.5 rounded-lg border border-border">

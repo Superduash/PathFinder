@@ -61,11 +61,14 @@ export const VisualizerPage: React.FC = () => {
     return {
       rows: 21,
       cols: 21,
-      genType: "backtracker",
+      genType: "loops",
       density: 0.25,
       diagonal: false,
-      weighted: false,
-      weightFraction: 0.3,
+      weighted: true,
+      weightFraction: 0.25,
+      loopFraction: 0.25,
+      terrainStyle: "blobs",
+      ensureSolvable: true,
       seed: 42,
     };
   });
@@ -82,6 +85,7 @@ export const VisualizerPage: React.FC = () => {
     pauseRace,
     stepRace,
     resetRace,
+    raceSummary,
   } = useRace(maze, participants, speed);
 
   // Deep-linking params support (?preset=...&racers=bfs,astar)
@@ -181,6 +185,9 @@ export const VisualizerPage: React.FC = () => {
           weight_fraction: cfg.weightFraction,
           seed: cfg.seed,
           randomize_endpoints: true,
+          ensure_solvable: cfg.ensureSolvable ?? true,
+          loop_fraction: cfg.loopFraction ?? 0.25,
+          terrain_style: cfg.terrainStyle ?? "blobs",
         }),
       });
       
@@ -493,6 +500,7 @@ export const VisualizerPage: React.FC = () => {
           stats={stats}
           winnerIdx={winnerIdx}
           maxExpandedSeen={maxExpandedSeen}
+          summary={raceSummary}
         />
       </div>
 

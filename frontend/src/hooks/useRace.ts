@@ -30,6 +30,10 @@ export interface ParticipantStats {
   currentNode?: [number, number] | null;
   path?: [number, number][] | null;
   note?: string | null;
+  phase?: "waiting" | "searching" | "done" | "no_route";
+  currents?: { side: "forward" | "backward" | null; cell: [number, number] }[];
+  initialWaiting?: [number, number][];
+  meetingCell?: [number, number] | null;
 }
 
 export function useRace(maze: Maze | null, participants: Participant[], speedLevel: number) {
@@ -42,6 +46,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
   const [serverNote, setServerNote] = useState<string | null>(null);
   const [countdown, _setCountdown] = useState<number | null>(null);
   const [stepCount, setStepCount] = useState<number>(0);
+  const [raceSummary, setRaceSummary] = useState<any>(null);
 
   const isRunningRef = useRef(false);
   const inFlightRef = useRef(false);
@@ -84,11 +89,19 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
         currentNode: null,
         path: null,
         note: null,
+        phase: p.phase || "waiting",
+        currents: [],
+        initialWaiting: (p.initial_waiting || [maze?.start || [0, 0]]) as [number, number][],
       }));
       setStats(initialStats);
+      setStats((current) => current.map((item) => ({
+        ...item,
+        frontierSet: new Set(item.initialWaiting?.map(([r, c]) => `${r},${c}`)),
+      })));
       setWinnerIdx(null);
       setWinnerReason(null);
       setInsights([]);
+      setRaceSummary(null);
       setStepCount(0);
       setRaceState(isRunningRef.current ? "running" : "ready");
       // Reset confetti flag for new race
@@ -161,6 +174,8 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
             frontierSet: nextFrontier,
             cellInfoMap: nextCellInfo,
             note: p.note || item.note,
+            phase: p.phase || item.phase,
+            currents: p.currents || item.currents,
           };
         });
       });
@@ -176,6 +191,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
         setWinnerIdx(msg.ranking[0]);
         if (msg.winner_reason) setWinnerReason(msg.winner_reason);
         if (msg.insights) setInsights(msg.insights);
+        setRaceSummary(msg);
       }
     });
 
@@ -231,6 +247,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
     setWinnerIdx(null);
     setWinnerReason(null);
     setInsights([]);
+    setRaceSummary(null);
     setStepCount(0);
     confettiFiredRef.current = false; // Reset confetti flag for new race
     socketRef.current.send({
@@ -288,6 +305,7 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
     winnerIdx,
     winnerReason,
     insights,
+    raceSummary,
     serverNote,
     countdown,
     stepCount,

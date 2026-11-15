@@ -8,6 +8,10 @@ export interface MazeMeta {
   generator?: string;
   seed?: number | null;
   preset?: string | null;
+  seed_used?: number | null;
+  retries?: number;
+  cycles?: number | null;
+  loop_fraction?: number | null;
 }
 
 export interface Maze {
@@ -124,9 +128,33 @@ export interface MetaResponse {
     density: number;
     weighted: boolean;
     weight_fraction: number;
+    loop_fraction?: number;
+    terrain_style?: "blobs" | "scatter";
+    ensure_solvable?: boolean;
     diagonal: boolean;
     repeats: number;
   };
+}
+
+export interface RaceCurrent {
+  side: "forward" | "backward" | null;
+  cell: [number, number];
+}
+
+export interface RaceAward {
+  id?: number | null;
+  ids?: number[];
+  value?: number | null;
+  cost?: number | null;
+  ms?: number | null;
+  within_noise?: boolean;
+  reason?: string;
+}
+
+export interface RaceSummary {
+  awards: Record<string, RaceAward>;
+  route_groups: Array<{ ids: number[]; same_route: boolean; label: string }>;
+  explanations: string[];
 }
 
 export interface SizeSpec {

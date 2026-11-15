@@ -6,6 +6,7 @@ interface NarratorBarProps {
   stats: ParticipantStats[];
   raceState: string;
   serverNote?: string | null;
+  onRetry?: () => void;
 }
 
 const NARRATOR_TEMPLATES: Record<string, string> = {
@@ -21,7 +22,17 @@ export const NarratorBar: React.FC<NarratorBarProps> = ({
   stats,
   raceState,
   serverNote,
+  onRetry,
 }) => {
+  if (raceState === "disconnected") {
+    return (
+      <div className="w-full px-3.5 py-2 rounded-lg border border-danger/30 bg-danger/10 flex items-center justify-between text-sm text-text" aria-live="polite">
+        <span>Can&apos;t reach the search server. Your maze is still safe.</span>
+        {onRetry && <button type="button" onClick={onRetry} className="px-3 py-1 rounded-md bg-surface border border-border font-semibold">Retry</button>}
+      </div>
+    );
+  }
+
   if (raceState === "idle") {
     return (
       <div className="w-full px-3.5 py-1.5 rounded-lg border border-border bg-surface-2 flex items-center justify-between text-xs text-muted select-none">
@@ -39,7 +50,7 @@ export const NarratorBar: React.FC<NarratorBarProps> = ({
   const fallback = activeParticipant
     ? NARRATOR_TEMPLATES[activeParticipant.algorithm.toLowerCase()] ||
       `${activeParticipant.algorithm.toUpperCase()} is checking cells…`
-    : "Evaluating search frontiers…";
+    : "Choose an algorithm, then start a race.";
 
   const displayMessage = serverNote || fallback;
 

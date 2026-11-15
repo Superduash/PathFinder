@@ -14,14 +14,13 @@ import { request } from "@/lib/api";
 import type { Maze } from "@/lib/types";
 
 const TECH_ITEMS = [
-  "React 19",
-  "TypeScript",
+  "React",
   "FastAPI",
   "NumPy",
-  "Scikit-learn",
-  "WebSockets",
-  "Tailwind CSS",
+  "scikit-learn",
+  "SQLite",
   "Recharts",
+  "HeroUI",
 ];
 
 const ALGORITHM_CARDS = [
@@ -99,7 +98,10 @@ export const LandingPage: React.FC = () => {
       body: JSON.stringify({
         rows: 15,
         cols: 15,
-        type: "backtracker",
+        type: "loops",
+        weighted: true,
+        loop_fraction: 0.25,
+        ensure_solvable: true,
         seed: 42,
         randomize_endpoints: true,
       }),
@@ -117,7 +119,7 @@ export const LandingPage: React.FC = () => {
       const resetTimer = setTimeout(() => resetRace(), 2500);
       return () => clearTimeout(resetTimer);
     }
-  }, [demoMaze, raceState]);
+  }, [demoMaze, raceState, resetRace, startRace]);
 
   const bfsStats = stats.find((s) => s.algorithm === "bfs");
   const astarStats = stats.find((s) => s.algorithm === "astar");
@@ -312,7 +314,7 @@ export const LandingPage: React.FC = () => {
           <p className="text-muted text-sm mt-1">Five classical algorithms, each with its own signature search strategy.</p>
         </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {ALGORITHM_CARDS.map((alg, idx) => (
             <Reveal key={alg.id} delay={idx * 0.05} className="p-5 rounded-2xl border border-border bg-surface flex flex-col justify-between hover:border-brand/40 transition-colors">
               <div className="flex flex-col gap-3">
@@ -322,7 +324,7 @@ export const LandingPage: React.FC = () => {
                   </span>
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: alg.color }} />
                 </div>
-                <p className="text-xs text-muted leading-relaxed">{alg.description}</p>
+                <p className="text-base text-muted leading-relaxed">{alg.description}</p>
               </div>
 
               <div className="mt-6 pt-4 border-t border-border flex flex-col gap-1.5">
@@ -332,6 +334,7 @@ export const LandingPage: React.FC = () => {
                   </span>
                 ))}
               </div>
+              <Link to={`/learn?lesson=${alg.id}`} className="mt-4 text-sm font-semibold text-brand hover:underline">Learn <ArrowRight className="inline w-3 h-3" /></Link>
             </Reveal>
           ))}
         </div>

@@ -81,12 +81,19 @@ def ensure_solvable(maze: MazeGrid, base_seed: int,
     """Retry generation with derived seeds until solvable or retries exhausted."""
     from backend.app.search.reference import is_reachable
     if is_reachable(maze):
+        maze.meta["seed_used"] = maze.seed
+        maze.meta["retries"] = 0
         return maze
     for k in range(1, max_retries + 1):
         derived = (base_seed * 1_000_003 + k) % (2**31)
-        candidate = gen_fn(seed=derived, **gen_kwargs)
+        retry_kwargs = {**gen_kwargs, "seed": derived}
+        candidate = gen_fn(**retry_kwargs)
         if is_reachable(candidate):
+            candidate.meta["seed_used"] = candidate.seed
+            candidate.meta["retries"] = k
             return candidate
+    maze.meta["seed_used"] = maze.seed
+    maze.meta["retries"] = max_retries
     return maze  # Return last attempt even if unsolvable
 
 
@@ -384,11 +391,11 @@ GENERATORS = {
 }
 
 
-def generate(type: str = "backtracker", rows: int = 20, cols: int = 20,
+def generate(type: str = "loops", rows: int = 21, cols: int = 21,
              density: float = 0.3, weighted: bool = False,
              weight_fraction: float = 0.3, diagonal: bool = False,
              seed: Optional[int] = None, randomize_endpoints_flag: bool = True,
-             ensure_solvable_flag: bool = False, loop_fraction: float = 0.25,
+             ensure_solvable_flag: bool = True, loop_fraction: float = 0.25,
              terrain_style: str = "blobs") -> MazeGrid:
     """Phase 2.1: Pass ensure_solvable_flag through, Phase 2.2: add loop_fraction and terrain_style."""
     from backend.app.errors import ApiError, UNKNOWN_GENERATOR
@@ -396,6 +403,7 @@ def generate(type: str = "backtracker", rows: int = 20, cols: int = 20,
         raise ApiError(UNKNOWN_GENERATOR, f"Unknown generator '{type}'. "
                        f"Available: {list(GENERATORS.keys())}")
     fn = GENERATORS[type]
+    base_seed = seed if seed is not None else random.randint(0, 2**31 - 1)
     kwargs = dict(
         rows=rows, cols=cols, density=density, weighted=weighted,
         weight_fraction=weight_fraction, diagonal=diagonal, seed=seed,
@@ -403,16 +411,13 @@ def generate(type: str = "backtracker", rows: int = 20, cols: int = 20,
         terrain_style=terrain_style,
     )
     
-    base_seed = seed if seed is not None else random.randint(0, 2**31 - 1)
+    kwargs["seed"] = base_seed
     maze = fn(**kwargs)
+    maze.meta.setdefault("seed_used", maze.seed)
+    maze.meta.setdefault("retries", 0)
     
     # Phase 2.1: Apply ensure_solvable if requested (F3 fix)
     if ensure_solvable_flag:
         maze = ensure_solvable(maze, base_seed, fn, kwargs, max_retries=50)
-        # Track retries in meta
-        if maze.seed != base_seed:
-            maze.meta["seed_used"] = maze.seed
-            maze.meta["retries"] = maze.seed - base_seed
-    
     return maze
 

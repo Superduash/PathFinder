@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link, useSearchParams } from "react-router-dom";
 import { request } from "@/lib/api";
 import { 
   BookOpen, 
@@ -21,6 +22,8 @@ interface WalkthroughFrame {
   checked: number[];
   waiting: { idx: number; coord: number[]; g: number; h: number | null; f: number }[];
   note: string;
+  currents?: { side: "forward" | "backward"; cell: [number, number] }[];
+  meeting_cell?: [number, number] | null;
 }
 
 interface WalkthroughData {
@@ -44,6 +47,11 @@ const SCENARIO_GRIDS: Record<string, { rows: number; cols: number; cells: number
     start: [3, 1], goal: [3, 5],
     cells: [1,1,1,1,1,1,1, 1,0,0,0,0,0,1, 1,0,1,1,1,0,1, 1,0,1,0,1,0,1, 1,0,1,1,1,0,1, 1,0,0,0,0,0,1, 1,1,1,1,1,1,1],
   },
+  river: {
+    rows: 7, cols: 7,
+    start: [3, 1], goal: [3, 5],
+    cells: [1,1,1,1,1,1,1, 1,0,0,3,0,0,1, 1,0,0,3,0,0,1, 1,0,0,3,0,0,1, 1,0,0,3,0,0,1, 1,0,0,0,0,0,1, 1,1,1,1,1,1,1],
+  },
 };
 
 function MiniMaze({
@@ -59,10 +67,11 @@ function MiniMaze({
   const checkedSet = new Set(frame?.checked ?? []);
   const waitingSet = new Set((frame?.waiting ?? []).map((w) => w.idx));
   const pathSet = new Set(path ?? []);
+  const currentSet = new Set((frame?.currents ?? []).map((item) => item.cell[0] * grid.cols + item.cell[1]));
 
   return (
     <div
-      className="grid gap-px bg-border rounded-lg overflow-hidden border border-border"
+      className="grid gap-px bg-border rounded-lg overflow-hidden border border-border w-full max-w-[420px] aspect-square"
       style={{ gridTemplateColumns: `repeat(${grid.cols}, 1fr)` }}
     >
       {grid.cells.map((cell, idx) => {
@@ -70,7 +79,7 @@ function MiniMaze({
         const c = idx % grid.cols;
         const isStart = r === grid.start[0] && c === grid.start[1];
         const isGoal = r === grid.goal[0] && c === grid.goal[1];
-        const isCurrent = frame?.current === idx;
+        const isCurrent = frame?.current === idx || currentSet.has(idx);
         const isChecked = checkedSet.has(idx);
         const isWaiting = waitingSet.has(idx);
         const isPath = pathSet.has(idx);
@@ -87,7 +96,7 @@ function MiniMaze({
         return (
           <div
             key={idx}
-            className={`w-6 h-6 ${bg} flex items-center justify-center transition-colors duration-100`}
+            className={`min-w-0 min-h-0 ${bg} flex items-center justify-center transition-colors duration-100`}
           >
             {isStart && <span className="text-[8px] font-bold text-white">S</span>}
             {isGoal && <span className="text-[8px] font-bold text-white">G</span>}
@@ -150,7 +159,7 @@ function AlgorithmWalkthrough({ algorithmId }: { algorithmId: string }) {
         <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
           Scenario:
         </span>
-        {["tiny", "trap"].map((s) => (
+        {["tiny", "trap", "river"].map((s) => (
           <button
             key={s}
             onClick={() => setScenario(s)}
@@ -160,7 +169,7 @@ function AlgorithmWalkthrough({ algorithmId }: { algorithmId: string }) {
                 : "bg-surface-2 border border-border text-muted hover:text-text"
             }`}
           >
-            {s === "tiny" ? "Simple Maze" : "U-Trap"}
+            {s === "tiny" ? "Simple Maze" : s === "trap" ? "U-Trap" : "River"}
           </button>
         ))}
       </div>
@@ -171,7 +180,7 @@ function AlgorithmWalkthrough({ algorithmId }: { algorithmId: string }) {
 
         {/* Frame info */}
         <div className="flex-1 flex flex-col gap-2 text-xs">
-          <div className="bg-surface-2 border border-border rounded-lg p-2.5 min-h-[60px]">
+          <div className="bg-surface-2 border border-border rounded-lg p-3 min-h-[60px]">
             <div className="text-[10px] font-bold uppercase tracking-wider text-muted mb-1">
               Step {frameIdx + 1} / {data.total_steps}
             </div>
@@ -608,6 +617,22 @@ const LESSONS = [
     ),
   },
   {
+    id: "same-routes",
+    title: "Why do routes look the same?",
+    icon: Map,
+    content: (
+      <div className="flex flex-col gap-4 text-sm text-muted leading-relaxed">
+        <p>Perfect mazes have exactly one route between two cells, so every complete algorithm must return the same path. The difference is the effort spent finding it.</p>
+        <p>BFS and UCS also agree when every move costs 1. Add terrain or loops to create meaningful trade-offs between steps, cost, and explored cells.</p>
+        <div className="flex flex-wrap gap-2">
+          <Link className="px-3 py-2 rounded-md border border-border text-brand" to="/visualizer?preset=perfect_maze">Try perfect maze</Link>
+          <Link className="px-3 py-2 rounded-md border border-border text-brand" to="/visualizer?preset=weighted_river">Try weighted river</Link>
+          <Link className="px-3 py-2 rounded-md border border-border text-brand" to="/visualizer?preset=greedy_trap">Try greedy trap</Link>
+        </div>
+      </div>
+    ),
+  },
+  {
     id: "glossary",
     title: "Glossary",
     icon: BookOpen,
@@ -618,7 +643,8 @@ const LESSONS = [
 // ─── Main Learn Page ──────────────────────────────────────────────────────────
 
 export const LearnPage: React.FC = () => {
-  const [activeLesson, setActiveLesson] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const [activeLesson, setActiveLesson] = useState(() => searchParams.get("lesson") || "overview");
   const lesson = LESSONS.find((l) => l.id === activeLesson) ?? LESSONS[0];
 
   return (

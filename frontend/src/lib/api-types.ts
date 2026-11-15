@@ -82,13 +82,16 @@ export interface EstimateResponse {
 export interface GenerateMazeRequest {
   rows?: number;
   cols?: number;
-  type?: "empty" | "random" | "backtracker" | "braided" | "weighted";
+  type?: "empty" | "random" | "backtracker" | "braided" | "loops" | "weighted";
   density?: number;
   weighted?: boolean;
   weight_fraction?: number;
   diagonal?: boolean;
   seed?: number | any;
   randomize_endpoints?: boolean;
+  ensure_solvable?: boolean;
+  loop_fraction?: number;
+  terrain_style?: "blobs" | "scatter";
 }
 
 export interface HTTPValidationError {
@@ -156,6 +159,15 @@ export interface MetaResponse {
   defaults: Record<string, any>;
   glossary?: Record<string, any>[];
   speed_levels?: Record<string, any>[];
+}
+
+export interface MethodologyResponse {
+  repetitions: string;
+  warmup: string;
+  generation: string;
+  timing: string;
+  summaries: string;
+  quality: string;
 }
 
 export interface PresetMazeRequest {

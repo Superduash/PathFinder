@@ -295,11 +295,14 @@ def get_meta(response: Response) -> MetaResponse:
         defaults={
             "rows": 21,
             "cols": 21,
-            "generator": "backtracker",
+            "generator": "loops",
             "density": 0.3,
-            "weighted": False,
-            "weight_fraction": 0.3,
+            "weighted": True,
+            "weight_fraction": 0.25,
+            "loop_fraction": 0.25,
+            "terrain_style": "blobs",
             "diagonal": False,
+            "ensure_solvable": True,
             "repeats": 3,
             "speed_level": 3,
             "benchmark_presets": {
@@ -325,3 +328,16 @@ def get_meta(response: Response) -> MetaResponse:
         glossary=GLOSSARY_ITEMS,
         speed_levels=SPEED_LEVELS,
     )
+
+
+@router.get("/meta/methodology")
+def get_methodology() -> dict:
+    """Server-owned benchmark methodology so the UI cannot drift from execution."""
+    return {
+        "repetitions": "Each configured maze is evaluated with the requested repeat count; summary values are aggregated per algorithm.",
+        "warmup": "No separate warm-up run is included in the reported dataset.",
+        "generation": "Mazes are generated from deterministic derived seeds across the selected sizes, densities, and generator types.",
+        "timing": "Search timing uses perf_counter_ns in one process with garbage collection disabled during the measured run.",
+        "summaries": "Means and standard deviations are reported for expansion and time; within-noise uses the server comparison rule.",
+        "quality": "Quality is C*/C, where C* is the optimal reference cost and C is the algorithm route cost.",
+    }

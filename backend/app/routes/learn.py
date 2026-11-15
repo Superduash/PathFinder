@@ -126,6 +126,12 @@ def get_walkthrough(
             "checked": checked_indices,
             "waiting": waiting_info,
             "note": note,
+            "currents": [
+                {"side": side, "cell": list(cell)}
+                for side, cell in getattr(search, "currents", {}).items()
+                if cell is not None
+            ],
+            "meeting_cell": list(search.meeting_cell) if getattr(search, "meeting_cell", None) else None,
         })
 
     result = {

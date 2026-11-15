@@ -12,6 +12,7 @@ interface UseMazeCanvasOptions {
   cellInfoMap?: Map<string, CellInfo>;
   overlayMode?: OverlayMode;
   currentNode?: [number, number] | null;
+  currents?: { side: "forward" | "backward" | null; cell: [number, number] }[];
   path?: [number, number][] | null;
   heatmap?: { r: number; c: number; h: number }[] | null;
   heuristicMap?: number[] | null;
@@ -29,6 +30,7 @@ export function useMazeCanvas({
   cellInfoMap,
   overlayMode = "off",
   currentNode,
+  currents,
   path,
   heatmap,
   heuristicMap,
@@ -242,12 +244,8 @@ export function useMazeCanvas({
         const isRecent = age < 300;
         const alpha = isRecent ? 0.35 : 0.22 * fadeProgress;
 
-        // Use complementary color for backward wave
+        // Keep the algorithm hue for both BDS waves; the backward wave is hatched.
         let fillColor = algorithmColor;
-        if (side === "backward") {
-          // For BDS backward wave, use orange/amber instead of the algorithm color
-          fillColor = "#FB923C"; // Tailwind orange-400
-        }
 
         ctx.fillStyle = fillColor;
         ctx.globalAlpha = alpha;
@@ -255,6 +253,19 @@ export function useMazeCanvas({
         const inset = 1;
         ctx.roundRect(x + inset, y + inset, cellW - inset * 2, cellH - inset * 2, 3);
         ctx.fill();
+        if (side === "backward") {
+          ctx.save();
+          ctx.globalAlpha = 0.32;
+          ctx.strokeStyle = algorithmColor;
+          ctx.lineWidth = Math.max(1, Math.min(cellW, cellH) * 0.08);
+          for (let offset = -cellH; offset < cellW; offset += Math.max(3, cellW * 0.35)) {
+            ctx.beginPath();
+            ctx.moveTo(x + offset, y + cellH);
+            ctx.lineTo(x + offset + cellH, y);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
         ctx.globalAlpha = 1.0;
       }
     }
@@ -269,23 +280,16 @@ export function useMazeCanvas({
         const y = r * cellH;
         const inset = 2;
         
-        // Check if this frontier cell is from backward wave
-        const cellInfo = cellInfoMap?.get(key);
-        const side = cellInfo?.side;
-        
-        if (side === "backward") {
-          ctx.strokeStyle = "#FB923C"; // Orange-400 for backward wave
-        } else {
-          ctx.strokeStyle = algorithmColor;
-        }
+        ctx.strokeStyle = algorithmColor;
         
         ctx.strokeRect(x + inset, y + inset, cellW - inset * 2, cellH - inset * 2);
       }
     }
 
     // 6. Looking at now (Current Node): Solid Dot + Pulsing Halo
-    if (currentNode) {
-      const [cr, cc] = currentNode;
+    const currentMarkers = currents?.length ? currents : currentNode ? [{ side: null, cell: currentNode }] : [];
+    for (const marker of currentMarkers) {
+      const [cr, cc] = marker.cell;
       const cx = cc * cellW + cellW / 2;
       const cy = cr * cellH + cellH / 2;
       const radius = Math.min(cellW, cellH) * 0.35;
@@ -303,6 +307,13 @@ export function useMazeCanvas({
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.fill();
+      if (marker.side === "backward") {
+        ctx.strokeStyle = algorithmColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 1.65, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
 
     // 7. Numbers on Cells Overlay (Order, g, h, f)
@@ -451,6 +462,7 @@ export function useMazeCanvas({
     cellInfoMap,
     overlayMode,
     currentNode,
+    currents,
     path,
     heatmap,
     heuristicMap,

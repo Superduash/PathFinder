@@ -5,6 +5,7 @@ import { getAlgorithmColor, ALGORITHM_VISUALS } from "@/lib/palette";
 import { CellInspector, type HoverCellData } from "@/components/visualizer/CellInspector";
 import type { Maze } from "@/lib/types";
 import type { ParticipantStats } from "@/hooks/useRace";
+import { phaseLabel } from "@/lib/raceUi";
 
 interface RacePanelProps {
   maze: Maze;
@@ -43,6 +44,7 @@ export const RacePanel: React.FC<RacePanelProps> = ({
     cellInfoMap: stats.cellInfoMap,
     overlayMode,
     currentNode: stats.currentNode,
+    currents: stats.currents,
     path: stats.path,
     heuristicMap,
     interactive: false,
@@ -92,7 +94,7 @@ export const RacePanel: React.FC<RacePanelProps> = ({
                 : "text-muted"
             }`}
           >
-            {stats.status === "found" ? "Route found" : stats.status === "running" ? "Searching…" : stats.status}
+            {phaseLabel(stats.phase)}
           </span>
         </div>
       </div>

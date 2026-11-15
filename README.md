@@ -11,7 +11,7 @@
 
 ## 🌟 Key Features
 
-1. **Interactive Stepwise Visualizer (Phase 5):**
+1. **Interactive Stepwise Visualizer:**
    - High-performance Canvas 2D engine with sub-millisecond drawing and pointer-drag Bresenham interpolation.
    - Interactive drawing tools: Wall, Erase, Sand (cost 3.0), Water (cost 5.0), Start, and Goal.
    - Live multi-participant races powered by WebSocket streaming with delta exploration.
@@ -27,13 +27,13 @@
 3. **Multi-Heuristic Engine:**
    - Manhattan, Euclidean, Octile, Chebyshev (diagonal only), and Zero heuristics.
 
-4. **Batch Benchmark & Metrics Engine (Phase 6):**
+4. **Batch Benchmark & Metrics Engine:**
    - Head-to-head timed comparisons with isolated GC execution.
    - Batch background jobs across grid dimensions and densities.
    - Summary statistics (nodes expanded, runtime variance, $C^*/C$ optimality).
    - CSV export for both summary and per-run telemetry.
 
-5. **Machine Learning Laboratory (Phase 6):**
+5. **Machine Learning Laboratory:**
    - **Heuristic Regression:** Linear Regression & Decision Tree models trained to predict true distance $h(n)$ with MAE, $R^2$, and overestimation reporting.
    - **Algorithm Classifier:** Decision Tree classifier predicting the fastest search algorithm on unseen mazes against a majority-class baseline.
 
@@ -104,9 +104,27 @@ To run frontend and backend with hot-reloading:
 
 ## 🧪 Testing & Verification
 
-Run the full pytest suite (27 comprehensive unit and integration tests):
+Run the full pytest suite:
 ```bash
 python -m pytest -q
+```
+
+Run the deterministic behavior acceptance report:
+```bash
+python scripts/verify_behavior.py
+```
+
+Check the WCAG token pairs used by the frontend:
+```bash
+node scripts/check_contrast.mjs
+```
+
+Frontend release checks:
+```bash
+cd frontend
+npm run typecheck
+npm run lint
+npm run build
 ```
 
 Run latency and benchmark SLA performance checks:

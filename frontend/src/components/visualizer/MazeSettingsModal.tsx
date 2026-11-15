@@ -9,6 +9,9 @@ export interface MazeConfig {
   diagonal: boolean;
   weighted: boolean;
   weightFraction: number;
+  loopFraction?: number;
+  terrainStyle?: "blobs" | "scatter";
+  ensureSolvable?: boolean;
   seed: number;
 }
 
@@ -20,6 +23,7 @@ interface MazeSettingsModalProps {
 }
 
 const STYLES = [
+  { id: "loops", name: "Loops", desc: "Several routes with readable corridors" },
   { id: "backtracker", name: "Twisty Corridors", desc: "Long winding paths with dead-ends" },
   { id: "braided", name: "Loops & Braids", desc: "Multiple alternative paths to the goal" },
   { id: "random", name: "Random Walls", desc: "Scattered obstacles with variable density" },

@@ -21,6 +21,10 @@ class MazeMeta(BaseModel):
     generator: str = ""
     seed: Optional[int] = None
     preset: Optional[str] = None
+    seed_used: Optional[int] = None
+    retries: int = 0
+    cycles: Optional[int] = None
+    loop_fraction: Optional[float] = None
 
 
 class Maze(BaseModel):
@@ -39,15 +43,18 @@ class Maze(BaseModel):
 # ---------------------------------------------------------------------------
 
 class GenerateMazeRequest(BaseModel):
-    rows: int = 20
-    cols: int = 20
-    type: Literal["empty", "random", "backtracker", "braided", "weighted"] = "backtracker"
+    rows: int = 21
+    cols: int = 21
+    type: Literal["empty", "random", "backtracker", "braided", "loops", "weighted"] = "loops"
     density: float = 0.3
-    weighted: bool = False
-    weight_fraction: float = 0.3
+    weighted: bool = True
+    weight_fraction: float = 0.25
     diagonal: bool = False
     seed: Optional[int] = None
     randomize_endpoints: bool = True
+    ensure_solvable: bool = True
+    loop_fraction: float = 0.25
+    terrain_style: Literal["blobs", "scatter"] = "blobs"
 
 
 class PresetMazeRequest(BaseModel):
@@ -294,6 +301,9 @@ class RaceSummaryMessage(BaseModel):
     winner_reason: Optional[str] = None
     reachable: bool = True
     optimal_cost: Optional[float] = None
+    awards: dict[str, Any] = Field(default_factory=dict)
+    route_groups: list[dict[str, Any]] = Field(default_factory=list)
+    explanations: list[str] = Field(default_factory=list)
 
 
 class ErrorMessage(BaseModel):

@@ -9,12 +9,22 @@ This document records the design reconciliation between the original specificati
 - Internal unexpected exceptions map to HTTP 500 with `code: "INTERNAL"`, logging traceback to server console while never leaking internal stack traces to clients.
 
 ## 2. Maze Generation & Weights
-- Request model uses `type: Literal["empty", "random", "backtracker", "braided", "weighted"]` with `weighted: bool` and `weight_fraction: float`.
+- Request model uses `type: Literal["empty", "random", "backtracker", "braided", "loops", "weighted"]`; the default is a solvable 21×21 `loops` maze with terrain blobs.
+- `ensure_solvable` retries with derived seeds (up to 50) and returns `meta.seed_used` plus `meta.retries`.
+- `loop_fraction` controls the seeded loop-removal pass; `terrain_style` is `blobs` or `scatter`.
 - Flat array `cells` encoding:
   - `0`: Open cell (cost 1.0)
   - `1`: Impassable wall
   - `2`: Sand terrain (cost 3.0)
   - `3`: Water terrain (cost 5.0)
+
+  ## 2.1 Race and analysis additions
+  - `race.ready.participants[].initial_waiting` contains the true initial frontier; the deprecated top-level `initial` contains only the start cell.
+  - `race.update.participants[].phase` is `waiting`, `searching`, `done`, or `no_route`. BDS also sends `currents` with `forward` and `backward` sides.
+  - `race.summary` retains `winner_reason` and adds `awards`, `route_groups`, and up to three factual `explanations`. `winner` compatibility is represented by `awards.best_overall.id`.
+  - `POST /api/maze/analyze` returns reachability, open/terrain counts, cycle count, `is_perfect`, and `route_diversity_hint`.
+  - Grid neighbor traversal is part of the reproducibility contract: up, right, down, left, followed by diagonals when enabled.
+  - `GET /api/meta/methodology` is the server-owned text used by the Benchmark methodology card.
 
 ## 3. Background Job Management & Cancellations
 - Jobs run asynchronously with states: `queued`, `running`, `done`, `error`, `cancelled`.

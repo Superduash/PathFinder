@@ -10,6 +10,7 @@ from backend.app.maze.grid import MazeGrid
 from backend.app.maze.generators import generate, randomize_endpoints as rand_ep
 from backend.app.maze.presets import load_preset
 from backend.app.search.heuristics import get_heuristic
+from backend.app.errors import ApiError
 
 router = APIRouter()
 
@@ -33,28 +34,10 @@ def api_generate_maze(req: GenerateMazeRequest) -> Maze:
         diagonal=req.diagonal,
         seed=req.seed,
         randomize_endpoints_flag=req.randomize_endpoints,
+        ensure_solvable_flag=req.ensure_solvable,
+        loop_fraction=req.loop_fraction,
+        terrain_style=req.terrain_style,
     )
-    
-    # Auto-ensure solvability for high-density random mazes
-    # Random mazes with density > 0.4 are often unsolvable
-    if req.type == "random" and req.density > 0.4:
-        from backend.app.search.reference import is_reachable
-        if not is_reachable(grid):
-            grid = ensure_solvable(
-                maze=grid,
-                base_seed=req.seed or 42,
-                gen_fn=generate,
-                gen_kwargs={
-                    "type": req.type,
-                    "rows": req.rows,
-                    "cols": req.cols,
-                    "density": req.density,
-                    "weighted": req.weighted,
-                    "weight_fraction": req.weight_fraction,
-                    "diagonal": req.diagonal,
-                    "randomize_endpoints_flag": req.randomize_endpoints,
-                },
-            )
     
     return Maze(**grid.to_dict())
 
