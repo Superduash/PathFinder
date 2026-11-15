@@ -12,6 +12,7 @@ import { ResultStrip } from "@/components/visualizer/ResultStrip";
 import { MazeSettingsModal, type MazeConfig } from "@/components/visualizer/MazeSettingsModal";
 import { NarratorBar } from "@/components/maze/NarratorBar";
 import { WinnerBanner } from "@/components/maze/WinnerBanner";
+import { RaceInsightsModal } from "@/components/visualizer/RaceInsightsModal";
 import { startVisualizerTour } from "@/lib/tour";
 import { request } from "@/lib/api";
 import { notify } from "@/lib/notify";
@@ -61,6 +62,7 @@ export const VisualizerPage: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
   const generationIdRef = useRef(0);
 
   // Overlay Mode and Heuristic Map state (§4.3)
@@ -330,6 +332,13 @@ export const VisualizerPage: React.FC = () => {
     { key: "]", handler: () => setSpeed(Math.min(6, speed + 1)) },
   ]);
 
+  // Show insights modal when race finishes
+  useEffect(() => {
+    if (raceState === "finished" && raceSummary) {
+      setShowInsights(true);
+    }
+  }, [raceState, raceSummary]);
+
   const toggleParticipant = (algId: string) => {
     const exists = participants.some((p) => p.algorithm === algId);
     if (exists) {
@@ -520,6 +529,18 @@ export const VisualizerPage: React.FC = () => {
         onApply={(newCfg) => {
           setMazeConfig(newCfg);
           handleGenerate(newCfg);
+        }}
+      />
+
+      {/* Race Insights Modal */}
+      <RaceInsightsModal
+        isOpen={showInsights}
+        onClose={() => setShowInsights(false)}
+        summary={raceSummary}
+        onRaceAgain={() => {
+          setShowInsights(false);
+          resetRace();
+          setTimeout(() => startRace(), 100);
         }}
       />
     </div>
