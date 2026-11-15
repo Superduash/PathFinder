@@ -87,6 +87,8 @@ export const PresetsPopover: React.FC<PresetsPopoverProps> = ({
                     onSelectPreset(p.id);
                     setIsOpen(false);
                   }}
+                  title={`${p.name}: ${p.desc}`}
+                  aria-label={`${p.name}: ${p.desc}`}
                   className={`flex flex-col text-left p-2 rounded-lg border transition-all text-xs ${
                     isSelected
                       ? "border-brand bg-brand/10 text-brand"
@@ -94,10 +96,10 @@ export const PresetsPopover: React.FC<PresetsPopoverProps> = ({
                   }`}
                 >
                   <div className="flex items-center justify-between w-full font-bold">
-                    <span>{p.name}</span>
+                    <span className="min-w-0 truncate" title={p.name}>{p.name}</span>
                     {isSelected && <Check className="w-3 h-3 text-brand" />}
                   </div>
-                  <span className="text-xs text-muted line-clamp-2 mt-0.5 leading-tight">
+                  <span className="text-xs text-muted line-clamp-2 mt-0.5 leading-tight" title={p.desc}>
                     {p.desc}
                   </span>
                 </button>
