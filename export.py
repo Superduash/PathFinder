@@ -1,18 +1,17 @@
-"""Single-file code exporter for AI reference.
-
-Collects only necessary source code files into code.txt, skipping build
-artifacts, virtualenvs, dependencies, and temporary files.
-
-Updated to prioritize core backend files for BDS fixes and algorithm implementation.
-"""
+"""Export the current implementation into one compact AI-reference file."""
 import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 OUTPUT_FILE = ROOT / "code.txt"
 
-# Priority files - these are exported first and always included
+# Current contract and core execution paths are exported first.
 PRIORITY_FILES = [
+    "README.md",
+    "requirements.txt",
+    "polish4.md",
+    "docs/contract-notes.md",
+    "docs/behavior-report.md",
     "backend/app/search/engine.py",
     "backend/app/search/bidirectional.py",
     "backend/app/search/algorithms.py",
@@ -24,11 +23,31 @@ PRIORITY_FILES = [
     "backend/app/maze/presets.py",
     "backend/app/services/narration.py",
     "backend/app/services/insights.py",
-    "polish4.md",
+    "backend/app/main.py",
+    "backend/app/routes/maze.py",
+    "backend/app/routes/meta.py",
+    "backend/app/routes/learn.py",
+    "frontend/package.json",
+    "frontend/vite.config.ts",
+    "frontend/index.html",
+    "frontend/src/App.tsx",
+    "frontend/src/routes.tsx",
+    "frontend/src/pages/Visualizer.tsx",
+    "frontend/src/pages/Landing.tsx",
+    "frontend/src/pages/Benchmark.tsx",
+    "frontend/src/pages/Learn.tsx",
+    "frontend/src/hooks/useRace.ts",
+    "frontend/src/hooks/useMazeCanvas.ts",
+    "frontend/src/lib/raceUi.ts",
+    "frontend/src/styles/tokens.css",
+    "frontend/src/styles/globals.css",
+    "scripts/verify_behavior.py",
+    "scripts/check_contrast.ts",
+    "scripts/check_contrast.mjs",
 ]
 
 # Whitelist extensions
-VALID_EXTENSIONS = {".py", ".ts", ".tsx", ".css", ".html", ".json", ".md"}
+VALID_EXTENSIONS = {".py", ".ts", ".tsx", ".css", ".html", ".json", ".md", ".mjs", ".txt"}
 
 # Exclude directories
 EXCLUDED_DIRS = {
@@ -41,12 +60,15 @@ EXCLUDED_DIRS = {
     ".venv",
     "venv",
     "legacy",
-    "docs",  # Skip docs for code export
+    ".next",
+    ".turbo",
 }
 
 # Exclude specific files
 EXCLUDED_FILES = {
     "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
     "tsconfig.app.tsbuildinfo",
     "code.txt",
     "export.py",
@@ -67,6 +89,12 @@ def should_include(file_path: Path) -> bool:
         return False
 
     return True
+
+
+def compact(content: str) -> str:
+    """Remove blank lines and trailing whitespace without changing code tokens."""
+    lines = [line.rstrip() for line in content.splitlines()]
+    return "\n".join(line for line in lines if line.strip())
 
 
 def export_code():
@@ -105,30 +133,19 @@ def export_code():
         out.write(f"# Generated: {Path(__file__).name}\n")
         out.write(f"# Total Files: {len(files_to_export)}\n")
         out.write(f"# Priority Files: {len(priority_paths)}\n")
-        out.write(f"#\n")
-        out.write(f"# Recent changes: BDS (Bidirectional Search) fixes from polish4.md Phase 3.1-3.2\n")
-        out.write(f"# - Per-racer initial_waiting (BDS shows start+goal, others show start only)\n")
-        out.write(f"# - Two-sided currents array for BDS visualization\n")
-        out.write(f"# - Phase field derivation from status\n")
-        out.write(f"# - Side-aware narration for BDS waves\n")
-        out.write(f"\n")
+        out.write("# Compact export: current source, tests, contracts, and release checks\n")
 
         for i, f in enumerate(files_to_export):
             rel_path = f.relative_to(ROOT).as_posix()
             is_priority = i < len(priority_paths)
             marker = " [PRIORITY]" if is_priority else ""
             
-            out.write(f"{'='*80}\n")
-            out.write(f"FILE: {rel_path}{marker}\n")
-            out.write(f"{'='*80}\n\n")
+            out.write(f"{'=' * 80}\nFILE: {rel_path}{marker}\n{'=' * 80}\n")
             try:
-                content = f.read_text(encoding="utf-8")
-                out.write(content)
-                if not content.endswith("\n"):
-                    out.write("\n")
+                out.write(compact(f.read_text(encoding="utf-8")))
             except Exception as e:
                 out.write(f"[Error reading file: {e}]\n")
-            out.write("\n\n")
+            out.write("\n")
 
     file_size = os.path.getsize(OUTPUT_FILE)
     file_size_mb = file_size / (1024 * 1024)
