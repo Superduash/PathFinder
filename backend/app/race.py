@@ -230,18 +230,58 @@ class RaceSession:
 
     def get_summary_message(self) -> RaceSummaryMessage:
         indices = list(range(len(self.participants)))
-
+        
+        found = [i for i, p in enumerate(self.participants) if p.search.status == "found"]
+        
+        # Balanced scoring system: 40% path quality, 35% efficiency, 25% speed
+        scores = {}
+        
+        if found:
+            # Find best values for normalization
+            min_cost = min(self.participants[i].search.path_cost or float("inf") for i in found)
+            min_expanded = min(self.participants[i].search.expanded_count for i in found)
+            min_time = min(self.participants[i].accumulated_compute_s for i in found)
+            
+            # Prevent division by zero
+            min_time = max(min_time, 1e-9)
+            
+            # Calculate weighted scores for each successful algorithm
+            for i in found:
+                p = self.participants[i]
+                cost = p.search.path_cost or float("inf")
+                expanded = p.search.expanded_count
+                time_s = max(p.accumulated_compute_s, 1e-9)
+                
+                # Normalize each metric (100 = best)
+                quality_score = 100.0 * (min_cost / cost)
+                efficiency_score = 100.0 * (min_expanded / expanded)
+                speed_score = 100.0 * (min_time / time_s)
+                
+                # Weighted combination: 40% quality, 35% efficiency, 25% speed
+                total_score = (0.40 * quality_score + 
+                              0.35 * efficiency_score + 
+                              0.25 * speed_score)
+                
+                scores[i] = {
+                    "total": total_score,
+                    "quality": quality_score,
+                    "efficiency": efficiency_score,
+                    "speed": speed_score,
+                }
+        
+        # Determine winner based on highest total score
+        best_id = max(found, key=lambda i: scores[i]["total"]) if found else None
+        
+        # Sort by score for ranking
         def rank_key(idx: int):
-            p = self.participants[idx].search
-            status_order = 0 if p.status == "found" else 1
-            optimal_order = 0 if compute_optimality(self.c_star, p.path_cost) == 1.0 else 1
-            cost = p.path_cost if p.path_cost is not None else float("inf")
-            return (status_order, optimal_order, p.expanded_count, cost)
-
+            if idx not in found:
+                return (1, 0)  # Failed searches at the end
+            return (0, -scores[idx]["total"])  # Successful, sorted by score descending
+        
         indices.sort(key=rank_key)
         states = [p.to_state(self.c_star, is_update=False, narrate=False) for p in self.participants]
 
-        found = [i for i, p in enumerate(self.participants) if p.search.status == "found"]
+        # Individual category awards
         optimal = [i for i in found if compute_optimality(self.c_star, self.participants[i].search.path_cost) == 1.0]
         fewest = min(found, key=lambda i: self.participants[i].search.expanded_count) if found else None
         fastest = min(found, key=lambda i: self.participants[i].accumulated_compute_s) if found else None
@@ -261,20 +301,41 @@ class RaceSession:
                 "within_noise": self._fastest_is_within_noise(found, fastest),
             },
         }
-        best = optimal if optimal else []
-        best_id = min(best, key=lambda i: (self.participants[i].search.expanded_count,
-                                           self.participants[i].search.path_cost or float("inf"))) if best else None
+        
+        # Generate winner explanation
+        winner_reason = ""
+        if best_id is not None:
+            winner = self.participants[best_id]
+            score_data = scores[best_id]
+            name = winner.algorithm.upper()
+            
+            # Determine what made this algorithm win
+            contributions = []
+            if score_data["quality"] > 95:
+                contributions.append("optimal path")
+            if score_data["efficiency"] > 95:
+                contributions.append("fewest cells checked")
+            if score_data["speed"] > 95:
+                contributions.append("fastest execution")
+            
+            if len(contributions) == 3:
+                winner_reason = f"{name} dominated all three metrics with a perfect score of {score_data['total']:.1f}/100."
+            elif len(contributions) >= 1:
+                winner_reason = f"{name} won with {score_data['total']:.1f}/100 points (best at {', '.join(contributions)})."
+            else:
+                winner_reason = f"{name} won with {score_data['total']:.1f}/100 points through balanced performance across all metrics."
+        
         awards["best_overall"] = {
             "id": best_id,
-            "reason": self._best_reason(best_id, optimal),
+            "reason": winner_reason,
+            "score": scores.get(best_id, {}).get("total"),
         }
 
         route_groups = self._route_groups(found)
         explanations = self._explanations(found, optimal, route_groups)
 
-        # Generate insights and compatibility winner text
+        # Generate insights
         insights = []
-        winner_reason = ""
 
         if self.c_star is None:
             insights.append({
@@ -285,16 +346,14 @@ class RaceSession:
             })
             winner_reason = "No path exists between start and goal."
         elif best_id is not None:
-            winner = self.participants[best_id]
-            winner_reason = awards["best_overall"]["reason"]
             insights.append({
                 "id": "best_overall",
                 "tone": "good",
-                "title": "Best overall",
+                "title": "Winner",
                 "text": winner_reason,
             })
         elif found:
-            winner_reason = "No racer found a shortest route."
+            winner_reason = "No successful searches."
 
         return RaceSummaryMessage(
             raceId=self.race_id,
@@ -316,14 +375,6 @@ class RaceSession:
         others = [self.participants[i].accumulated_compute_s * 1000 for i in found if i != fastest]
         gap = min(others) - fastest_ms
         return gap < 1.0 or gap / max(min(others), 1e-9) < 0.2
-
-    def _best_reason(self, best_id: Optional[int], optimal: list[int]) -> str:
-        if best_id is None:
-            return "No racer found a shortest route."
-        name = self.participants[best_id].algorithm.upper()
-        if len(optimal) == 1:
-            return f"{name} found a shortest route with the fewest cells checked."
-        return f"{name} shared a shortest route and checked the fewest cells among optimal racers."
 
     def _route_groups(self, found: list[int]) -> list[dict]:
         groups: dict[tuple, list[int]] = {}
