@@ -9,6 +9,9 @@ import {
   Pencil,
   Grid,
   Lightbulb,
+  Undo,
+  Redo,
+  Trash2,
 } from "lucide-react";
 import { PresetsPopover } from "./PresetsPopover";
 import type { OverlayMode } from "@/hooks/useMazeCanvas";
@@ -34,6 +37,11 @@ interface VisualizerToolbarProps {
   showHintMap: boolean;
   onToggleHintMap: () => void;
   disabled?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onClearMaze?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
 const SPEED_OPTIONS = [
@@ -73,6 +81,11 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
   showHintMap,
   onToggleHintMap,
   disabled = false,
+  onUndo,
+  onRedo,
+  onClearMaze,
+  canUndo = false,
+  canRedo = false,
 }) => {
   const isRunning = raceState === "running";
   const uiState = deriveUiState({ socketStatus: raceState === "disconnected" ? "offline" : "open", raceState });
@@ -230,15 +243,51 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
           {viewMode === "edit" ? (
             <>
               <Pencil className="w-3.5 h-3.5" />
-              <span>Editing</span>
+              <span>Editor</span>
             </>
           ) : (
             <>
               <Grid className="w-3.5 h-3.5" />
-              <span>Race View</span>
+              <span>Race</span>
             </>
           )}
         </button>
+        
+        {/* Edit Mode Controls: Undo, Redo, Clear */}
+        {viewMode === "edit" && (
+          <>
+            <div className="h-4 w-px bg-border mx-1" />
+            
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              title="Undo last edit (Ctrl+Z)"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-2xs"
+            >
+              <Undo className="w-3.5 h-3.5 text-muted" />
+              <span>Undo</span>
+            </button>
+            
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Y)"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-2xs"
+            >
+              <Redo className="w-3.5 h-3.5 text-muted" />
+              <span>Redo</span>
+            </button>
+            
+            <button
+              onClick={onClearMaze}
+              title="Clear entire maze to empty floor"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-danger/10 hover:border-danger/40 text-text hover:text-danger text-xs font-semibold transition-colors shadow-2xs"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Clear</span>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
