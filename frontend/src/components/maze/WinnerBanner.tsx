@@ -1,5 +1,5 @@
 import React from "react";
-import { Trophy, ArrowRight, RotateCcw } from "lucide-react";
+import { Trophy, ArrowRight, RotateCcw, BarChart3 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ParticipantStats } from "@/hooks/useRace";
 
@@ -16,6 +16,7 @@ interface WinnerBannerProps {
   insights?: (string | InsightItem)[];
   onRaceAgain: () => void;
   onNewMaze: () => void;
+  onShowInsights?: () => void;
 }
 
 export const WinnerBanner: React.FC<WinnerBannerProps> = ({
@@ -24,6 +25,7 @@ export const WinnerBanner: React.FC<WinnerBannerProps> = ({
   insights = [],
   onRaceAgain,
   onNewMaze,
+  onShowInsights,
 }) => {
   return (
     <div className="w-full p-4 rounded-xl border-2 border-brand bg-surface shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-3 duration-300">
@@ -96,6 +98,16 @@ export const WinnerBanner: React.FC<WinnerBannerProps> = ({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
+        {onShowInsights && (
+          <button
+            onClick={onShowInsights}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand/15 border border-brand/30 text-brand font-bold text-xs shadow-xs hover:bg-brand/25 transition-all"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>View Insights</span>
+          </button>
+        )}
+
         <button
           onClick={onRaceAgain}
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand text-brand-ink font-bold text-xs shadow-xs hover:brightness-110 transition-all"

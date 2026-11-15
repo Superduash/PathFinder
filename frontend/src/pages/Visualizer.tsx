@@ -332,12 +332,8 @@ export const VisualizerPage: React.FC = () => {
     { key: "]", handler: () => setSpeed(Math.min(6, speed + 1)) },
   ]);
 
-  // Show insights modal when race finishes
-  useEffect(() => {
-    if (raceState === "finished" && raceSummary) {
-      setShowInsights(true);
-    }
-  }, [raceState, raceSummary]);
+  // Show insights modal when race finishes - REMOVED AUTO-POPUP
+  // User will click a button to view insights instead
 
   const toggleParticipant = (algId: string) => {
     const exists = participants.some((p) => p.algorithm === algId);
@@ -434,6 +430,7 @@ export const VisualizerPage: React.FC = () => {
           insights={insights}
           onRaceAgain={handleStartRace}
           onNewMaze={handleNewMaze}
+          onShowInsights={() => setShowInsights(true)}
         />
       )}
 

@@ -202,7 +202,7 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
                 </div>
                 <div className="text-right">
                   <div className="text-4xl font-bold font-display" style={{ color: getAlgorithmColor(winnerData.algorithm).main }}>
-                    {winnerScore?.toFixed(1)}
+                    {winnerScore !== undefined && !isNaN(winnerScore) ? winnerScore.toFixed(1) : "—"}
                   </div>
                   <div className="text-xs text-muted">Weighted score</div>
                 </div>
@@ -216,10 +216,10 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
                 <MetricCard label="Cells checked" value={winnerData.expanded} />
                 <MetricCard
                   label="Route cost"
-                  value={winnerData.pathCost?.toFixed(1) || "—"}
+                  value={winnerData.pathCost !== undefined && winnerData.pathCost !== null ? winnerData.pathCost.toFixed(1) : "—"}
                   highlight={winnerData.optimality === 1.0}
                 />
-                <MetricCard label="Path length" value={winnerData.pathLength || 0} />
+                <MetricCard label="Path length" value={winnerData.pathLength !== undefined && winnerData.pathLength !== null ? winnerData.pathLength : "—"} />
               </div>
             </div>
           )}
@@ -241,7 +241,7 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
                 </div>
                 <div className="text-right">
                   <div className="text-3xl font-bold font-display text-text">
-                    {runnerUpScore.toFixed(1)}
+                    {runnerUpScore !== undefined && !isNaN(runnerUpScore) ? runnerUpScore.toFixed(1) : "—"}
                   </div>
                   <div className="text-xs text-muted">Score</div>
                 </div>
@@ -249,18 +249,18 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
 
               <p className="text-sm text-text-2 mb-4">
                 {runnerUpData.optimality === 1.0
-                  ? `${getAlgorithmName(runnerUpData.algorithm)} found an optimal route with cost ${runnerUpData.pathCost?.toFixed(1)}.`
-                  : `${getAlgorithmName(runnerUpData.algorithm)} explored ${runnerUpData.expanded} cells.`}
+                  ? `${getAlgorithmName(runnerUpData.algorithm)} found an optimal route with cost ${runnerUpData.pathCost !== undefined && runnerUpData.pathCost !== null ? runnerUpData.pathCost.toFixed(1) : "unknown"}.`
+                  : `${getAlgorithmName(runnerUpData.algorithm)} explored ${runnerUpData.expanded} cells and found a route.`}
               </p>
 
               <div className="grid grid-cols-3 gap-3">
                 <MetricCard label="Cells checked" value={runnerUpData.expanded} />
                 <MetricCard
                   label="Route cost"
-                  value={runnerUpData.pathCost?.toFixed(1) || "—"}
+                  value={runnerUpData.pathCost !== undefined && runnerUpData.pathCost !== null ? runnerUpData.pathCost.toFixed(1) : "—"}
                   highlight={runnerUpData.optimality === 1.0}
                 />
-                <MetricCard label="Path length" value={runnerUpData.pathLength || 0} />
+                <MetricCard label="Path length" value={runnerUpData.pathLength !== undefined && runnerUpData.pathLength !== null ? runnerUpData.pathLength : "—"} />
               </div>
             </div>
           )}
@@ -341,7 +341,7 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
                           </div>
                           <div className="text-xs text-muted">
                             {p.status === "found"
-                              ? `${p.expanded} cells · Cost ${p.pathCost?.toFixed(1)} · ${p.optimality === 1.0 ? "Optimal" : "Suboptimal"}`
+                              ? `${p.expanded} cells · Cost ${p.pathCost !== undefined && p.pathCost !== null ? p.pathCost.toFixed(1) : "—"} · ${p.optimality === 1.0 ? "Optimal" : "Suboptimal"}`
                               : "Failed to find route"}
                           </div>
                         </div>
