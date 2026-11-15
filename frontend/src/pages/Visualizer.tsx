@@ -50,9 +50,7 @@ export const VisualizerPage: React.FC = () => {
     updateCell,
     clearMaze,
     undo,
-    redo,
     canUndo,
-    canRedo,
     beginEdit,
   } = useAppStore();
 
@@ -408,10 +406,8 @@ export const VisualizerPage: React.FC = () => {
         onToggleHintMap={() => setShowHintMap((v) => !v)}
         disabled={isGenerating}
         onUndo={undo}
-        onRedo={redo}
         onClearMaze={clearMaze}
         canUndo={canUndo()}
-        canRedo={canRedo()}
       />
 
       {/* Narrator Banner (§5.4) */}

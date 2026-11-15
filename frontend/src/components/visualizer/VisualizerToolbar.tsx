@@ -10,7 +10,6 @@ import {
   Grid3x3,
   Lightbulb,
   Undo2,
-  Redo2,
   Eraser,
   ArrowLeftRight,
 } from "lucide-react";
@@ -39,10 +38,8 @@ interface VisualizerToolbarProps {
   onToggleHintMap: () => void;
   disabled?: boolean;
   onUndo?: () => void;
-  onRedo?: () => void;
   onClearMaze?: () => void;
   canUndo?: boolean;
-  canRedo?: boolean;
 }
 
 const SPEED_OPTIONS = [
@@ -83,10 +80,8 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
   onToggleHintMap,
   disabled = false,
   onUndo,
-  onRedo,
   onClearMaze,
   canUndo = false,
-  canRedo = false,
 }) => {
   const isRunning = raceState === "running";
   const uiState = deriveUiState({ socketStatus: raceState === "disconnected" ? "offline" : "open", raceState });
@@ -255,7 +250,7 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
           <ArrowLeftRight className="w-3 h-3 opacity-60" />
         </button>
         
-        {/* Edit Mode Controls: Undo, Redo, Clear */}
+        {/* Edit Mode Controls: Undo, Clear */}
         {viewMode === "edit" && (
           <>
             <div className="h-4 w-px bg-border mx-1" />
@@ -268,16 +263,6 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
             >
               <Undo2 className="w-3.5 h-3.5 text-muted" />
               <span>Undo</span>
-            </button>
-            
-            <button
-              onClick={onRedo}
-              disabled={!canRedo}
-              title="Redo (Ctrl+Y)"
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-2xs"
-            >
-              <Redo2 className="w-3.5 h-3.5 text-muted" />
-              <span>Redo</span>
             </button>
             
             <button

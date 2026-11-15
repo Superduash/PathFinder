@@ -133,9 +133,13 @@ export const useAppStore = create<AppState>()(
       
       redo: () =>
         set((state) => {
-          if (!state.maze || state.historyIndex >= state.history.length - 1) return state;
+          if (!state.maze) return state;
           
-          const entry = state.history[state.historyIndex + 1];
+          // Check if we can redo
+          const nextIndex = state.historyIndex + 2;
+          if (nextIndex >= state.history.length) return state;
+          
+          const entry = state.history[nextIndex];
           if (!entry) return state;
           
           return {
