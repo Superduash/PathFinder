@@ -31,6 +31,7 @@ interface AppState {
   canUndo: () => boolean;
   canRedo: () => boolean;
   pushHistory: () => void;
+  beginEdit: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -134,7 +135,7 @@ export const useAppStore = create<AppState>()(
         set((state) => {
           if (!state.maze || state.historyIndex >= state.history.length - 1) return state;
           
-          const entry = state.history[state.historyIndex + 2];
+          const entry = state.history[state.historyIndex + 1];
           if (!entry) return state;
           
           return {
@@ -147,6 +148,31 @@ export const useAppStore = create<AppState>()(
             historyIndex: state.historyIndex + 1,
           };
         }),
+      
+      beginEdit: () => {
+        const state = get();
+        if (!state.maze) return;
+        
+        // Push current state to history before starting edit
+        const entry: HistoryEntry = {
+          cells: [...state.maze.cells],
+          start: [...state.maze.start] as [number, number],
+          goal: [...state.maze.goal] as [number, number],
+        };
+        
+        const newHistory = state.history.slice(0, state.historyIndex + 1);
+        newHistory.push(entry);
+        
+        // Limit history to 50 entries
+        if (newHistory.length > 50) {
+          newHistory.shift();
+        }
+        
+        set({
+          history: newHistory,
+          historyIndex: newHistory.length - 1,
+        });
+      },
       
       canUndo: () => {
         const state = get();

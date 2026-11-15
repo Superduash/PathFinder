@@ -48,6 +48,12 @@ export const VisualizerPage: React.FC = () => {
     speed,
     setSpeed,
     updateCell,
+    clearMaze,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    beginEdit,
   } = useAppStore();
 
   const [viewMode, setViewMode] = useState<"edit" | "race">(() => {
@@ -305,6 +311,7 @@ export const VisualizerPage: React.FC = () => {
     maze,
     interactive: viewMode === "edit" && raceState !== "running",
     onCellClick: handleCellClick,
+    onBeginEdit: beginEdit,
   });
 
   // Hotkeys
@@ -400,6 +407,11 @@ export const VisualizerPage: React.FC = () => {
         showHintMap={showHintMap}
         onToggleHintMap={() => setShowHintMap((v) => !v)}
         disabled={isGenerating}
+        onUndo={undo}
+        onRedo={redo}
+        onClearMaze={clearMaze}
+        canUndo={canUndo()}
+        canRedo={canRedo()}
       />
 
       {/* Narrator Banner (§5.4) */}

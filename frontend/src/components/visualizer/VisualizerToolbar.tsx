@@ -6,12 +6,13 @@ import {
   StepForward,
   Dices,
   Settings,
-  Pencil,
-  Grid,
+  Edit,
+  Grid3x3,
   Lightbulb,
-  Undo,
-  Redo,
-  Trash2,
+  Undo2,
+  Redo2,
+  Eraser,
+  ArrowLeftRight,
 } from "lucide-react";
 import { PresetsPopover } from "./PresetsPopover";
 import type { OverlayMode } from "@/hooks/useMazeCanvas";
@@ -230,27 +231,28 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
 
         <div className="h-4 w-px bg-border mx-1" />
 
-        {/* View Mode Toggle: Edit Mode vs Race Grid */}
+        {/* View Mode Toggle: Editor ⇄ Race with double arrow */}
         <button
           onClick={onToggleViewMode}
-          title={viewMode === "edit" ? "Switch to Head-to-Head Race Panels" : "Switch to Large Editor Canvas"}
+          title={viewMode === "edit" ? "Switch to Race View" : "Switch to Editor"}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors shadow-2xs ${
             viewMode === "edit"
               ? "border-brand bg-brand/10 text-brand"
-              : "border-border bg-surface-2 text-text"
+              : "border-border bg-surface-2 text-text hover:bg-surface"
           }`}
         >
           {viewMode === "edit" ? (
             <>
-              <Pencil className="w-3.5 h-3.5" />
+              <Edit className="w-3.5 h-3.5" />
               <span>Editor</span>
             </>
           ) : (
             <>
-              <Grid className="w-3.5 h-3.5" />
+              <Grid3x3 className="w-3.5 h-3.5" />
               <span>Race</span>
             </>
           )}
+          <ArrowLeftRight className="w-3 h-3 opacity-60" />
         </button>
         
         {/* Edit Mode Controls: Undo, Redo, Clear */}
@@ -261,10 +263,10 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
             <button
               onClick={onUndo}
               disabled={!canUndo}
-              title="Undo last edit (Ctrl+Z)"
+              title="Undo (Ctrl+Z)"
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-2xs"
             >
-              <Undo className="w-3.5 h-3.5 text-muted" />
+              <Undo2 className="w-3.5 h-3.5 text-muted" />
               <span>Undo</span>
             </button>
             
@@ -274,16 +276,16 @@ export const VisualizerToolbar: React.FC<VisualizerToolbarProps> = ({
               title="Redo (Ctrl+Y)"
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-2xs"
             >
-              <Redo className="w-3.5 h-3.5 text-muted" />
+              <Redo2 className="w-3.5 h-3.5 text-muted" />
               <span>Redo</span>
             </button>
             
             <button
               onClick={onClearMaze}
-              title="Clear entire maze to empty floor"
+              title="Clear maze to empty floor"
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-danger/10 hover:border-danger/40 text-text hover:text-danger text-xs font-semibold transition-colors shadow-2xs"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Eraser className="w-3.5 h-3.5" />
               <span>Clear</span>
             </button>
           </>

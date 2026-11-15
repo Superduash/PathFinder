@@ -18,6 +18,7 @@ interface UseMazeCanvasOptions {
   heuristicMap?: number[] | null;
   interactive?: boolean;
   onCellClick?: (r: number, c: number) => void;
+  onBeginEdit?: () => void;
   hoverCell?: [number, number] | null;
   onHoverCell?: (info: { r: number; c: number; x: number; y: number } | null) => void;
 }
@@ -36,6 +37,7 @@ export function useMazeCanvas({
   heuristicMap,
   interactive = false,
   onCellClick,
+  onBeginEdit,
   hoverCell,
   onHoverCell,
 }: UseMazeCanvasOptions) {
@@ -517,6 +519,12 @@ export function useMazeCanvas({
     if (!interactive) return;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     isPointerDownRef.current = true;
+    
+    // Call onBeginEdit before making any changes for undo/redo
+    if (onBeginEdit) {
+      onBeginEdit();
+    }
+    
     const cell = getCellFromEvent(e);
     if (cell && onCellClick) {
       lastCellRef.current = cell;

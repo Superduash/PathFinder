@@ -1,4 +1,5 @@
 import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
 
 export function startVisualizerTour() {
   const driverObj = driver({
@@ -8,6 +9,7 @@ export function startVisualizerTour() {
     nextBtnText: "Next ›",
     prevBtnText: "‹ Back",
     doneBtnText: "Done! 🚀",
+    popoverClass: "pathfinder-tour-popover",
     steps: [
       {
         element: "#toolbox-step",
@@ -68,4 +70,3 @@ export function startVisualizerTour() {
 
   driverObj.drive();
 }
-
