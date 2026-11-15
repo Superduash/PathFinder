@@ -5,6 +5,7 @@ import type { Maze, Participant } from "@/lib/types";
 export type ToolType = "wall" | "erase" | "start" | "goal" | "sand" | "water";
 
 interface AppState {
+  version: number;
   maze: Maze | null;
   selectedTool: ToolType;
   participants: Participant[];
@@ -21,6 +22,7 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
+      version: 2,
       maze: null,
       selectedTool: "wall",
       participants: [
@@ -46,7 +48,20 @@ export const useAppStore = create<AppState>()(
     {
       name: "pathfinder-app-storage",
       storage: createJSONStorage(() => localStorage),
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        // Drop maze if migrating from v1 to v2 (stale perfect mazes)
+        if (version < 2) {
+          return {
+            ...persistedState,
+            maze: null,
+            version: 2,
+          };
+        }
+        return persistedState;
+      },
       partialize: (state) => ({
+        version: state.version,
         maze: state.maze,
         participants: state.participants,
         speed: state.speed,

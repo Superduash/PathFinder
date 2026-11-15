@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { AlertTriangle } from "lucide-react";
 import { ALGORITHM_VISUALS, getAlgorithmColor } from "@/lib/palette";
 import type { Participant } from "@/lib/types";
+import { notify } from "@/lib/notify";
 
 interface RacersSidebarProps {
   participants: Participant[];
@@ -21,13 +22,28 @@ export const RacersSidebar: React.FC<RacersSidebarProps> = ({
 }) => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme !== "light";
+  const prevDiagonalRef = useRef(diagonal);
+
+  // Auto-switch manhattan to octile when diagonal is turned on
+  useEffect(() => {
+    if (diagonal && !prevDiagonalRef.current) {
+      // Diagonal was just turned on
+      participants.forEach((p) => {
+        if ((p.algorithm === "greedy" || p.algorithm === "astar") && p.heuristic === "manhattan") {
+          onUpdateHeuristic(p.algorithm, "octile");
+          notify.info("Switched to octile: Manhattan overestimates diagonal moves");
+        }
+      });
+    }
+    prevDiagonalRef.current = diagonal;
+  }, [diagonal, participants, onUpdateHeuristic]);
 
   const isSelected = (key: string) => participants.some((p) => p.algorithm === key);
   const getHeuristic = (key: string) =>
     participants.find((p) => p.algorithm === key)?.heuristic || "manhattan";
 
   return (
-    <aside className="w-56 shrink-0 flex flex-col gap-2 p-3 bg-surface border border-border rounded-xl shadow-xs select-none">
+    <aside className="w-72 shrink-0 flex flex-col gap-2 p-3 bg-surface border border-border rounded-xl shadow-xs select-none min-w-0">
       <div className="flex items-center justify-between pb-1 border-b border-border">
         <span className="text-xs font-bold uppercase tracking-wider text-muted">
           Racers ({participants.length}/6)
@@ -62,7 +78,7 @@ export const RacersSidebar: React.FC<RacersSidebarProps> = ({
                 onClick={() => onToggleParticipant(key)}
                 className="flex items-center justify-between p-2 cursor-pointer gap-2"
               >
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                   <span
                     className="w-3 h-3 rounded-full shrink-0 shadow-xs"
                     style={{ backgroundColor: color }}
@@ -71,7 +87,7 @@ export const RacersSidebar: React.FC<RacersSidebarProps> = ({
                     <span className="text-xs font-bold text-text truncate">
                       {meta.short}
                     </span>
-                    <span className="text-xs text-muted truncate leading-tight">
+                    <span className="text-xs text-muted whitespace-nowrap leading-tight">
                       {meta.fullName}
                     </span>
                   </div>
@@ -94,12 +110,12 @@ export const RacersSidebar: React.FC<RacersSidebarProps> = ({
               {/* Expandable Heuristic Selector for Greedy and A* */}
               {active && hasHeuristic && (
                 <div className="px-2 pb-2 pt-1 border-t border-border/50 bg-surface/60 flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-xs text-muted font-medium">
-                    <span>Hint (Heuristic):</span>
+                  <div className="flex flex-col gap-1 text-xs text-muted font-medium">
+                    <span className="whitespace-nowrap">Hint (Heuristic):</span>
                     <select
                       value={currentH}
                       onChange={(e) => onUpdateHeuristic(key, e.target.value)}
-                      className="bg-surface-2 border border-border rounded px-1.5 py-0.5 text-xs font-semibold text-text focus:outline-none focus:ring-1 focus:ring-brand"
+                      className="w-full bg-surface-2 border border-border rounded px-1.5 py-1 text-xs font-semibold text-text focus:outline-none focus:ring-1 focus:ring-brand"
                     >
                       <option value="manhattan">Manhattan (Grid)</option>
                       <option value="euclidean">Euclidean (Direct)</option>

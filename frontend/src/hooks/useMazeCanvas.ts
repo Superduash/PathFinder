@@ -242,48 +242,49 @@ export function useMazeCanvas({
         
         // Recency heat (comet tail for newest cells)
         const isRecent = age < 300;
-        const alpha = isRecent ? 0.35 : 0.22 * fadeProgress;
+        const alpha = isRecent ? 0.20 : 0.14 * fadeProgress; // Reduced from 0.35/0.22
 
-        // Keep the algorithm hue for both BDS waves; the backward wave is hatched.
+        // BDS: use a lighter/desaturated color for backward wave
         let fillColor = algorithmColor;
+        if (side === "backward") {
+          // For backward wave: add white overlay to lighten the color
+          fillColor = algorithmColor; // will be composited with lower alpha below
+        }
 
         ctx.fillStyle = fillColor;
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = side === "backward" ? alpha * 0.6 : alpha; // lighter for backward
         ctx.beginPath();
         const inset = 1;
         ctx.roundRect(x + inset, y + inset, cellW - inset * 2, cellH - inset * 2, 3);
         ctx.fill();
+        
+        // Add a subtle white overlay for backward wave to lighten it
         if (side === "backward") {
-          ctx.save();
-          ctx.globalAlpha = 0.32;
-          ctx.strokeStyle = algorithmColor;
-          ctx.lineWidth = Math.max(1, Math.min(cellW, cellH) * 0.08);
-          for (let offset = -cellH; offset < cellW; offset += Math.max(3, cellW * 0.35)) {
-            ctx.beginPath();
-            ctx.moveTo(x + offset, y + cellH);
-            ctx.lineTo(x + offset + cellH, y);
-            ctx.stroke();
-          }
-          ctx.restore();
+          ctx.fillStyle = "#ffffff";
+          ctx.globalAlpha = 0.35; // Slightly reduced
+          ctx.fill();
         }
+        
         ctx.globalAlpha = 1.0;
       }
     }
 
-    // 5. Waiting Cells (Frontier): 2px Ring Only, Algorithm Hue, NO Fill
+    // 5. Waiting Cells (Frontier): 1px Ring Only, Algorithm Hue at 0.9 alpha, NO Fill
     // For BDS: use different colors for forward/backward wave frontiers
     if (frontierSet && frontierSet.size > 0) {
-      ctx.lineWidth = 1.75;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.9;
       for (const key of frontierSet) {
         const [r, c] = key.split(",").map(Number);
         const x = c * cellW;
         const y = r * cellH;
-        const inset = 2;
+        const inset = 1;
         
         ctx.strokeStyle = algorithmColor;
         
         ctx.strokeRect(x + inset, y + inset, cellW - inset * 2, cellH - inset * 2);
       }
+      ctx.globalAlpha = 1.0;
     }
 
     // 6. Looking at now (Current Node): Solid Dot + Pulsing Halo
@@ -295,23 +296,40 @@ export function useMazeCanvas({
       const radius = Math.min(cellW, cellH) * 0.35;
       const pulse = 1 + 0.2 * Math.sin(now / 150);
 
-      // Halo
+      // Halo (lighter for backward wave)
       ctx.fillStyle = algorithmColor;
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = marker.side === "backward" ? 0.25 : 0.35;
       ctx.beginPath();
       ctx.arc(cx, cy, radius * 1.5 * pulse, 0, Math.PI * 2);
       ctx.fill();
+      
+      // Add white overlay for backward wave halo
+      if (marker.side === "backward") {
+        ctx.fillStyle = "#ffffff";
+        ctx.globalAlpha = 0.15;
+        ctx.fill();
+      }
+      
       ctx.globalAlpha = 1.0;
 
       // Solid center
+      ctx.fillStyle = algorithmColor;
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.fill();
+      
+      // Lighten backward wave dot with white overlay
       if (marker.side === "backward") {
+        ctx.fillStyle = "#ffffff";
+        ctx.globalAlpha = 0.4;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+        
+        // Add a ring to distinguish backward wave
         ctx.strokeStyle = algorithmColor;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(cx, cy, radius * 1.65, 0, Math.PI * 2);
+        ctx.arc(cx, cy, radius * 1.6, 0, Math.PI * 2);
         ctx.stroke();
       }
     }

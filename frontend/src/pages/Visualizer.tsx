@@ -17,7 +17,7 @@ import { request } from "@/lib/api";
 import { notify } from "@/lib/notify";
 import type { Maze } from "@/lib/types";
 
-const CFG_KEY = "pathfinder-maze-config-v5";
+const CFG_KEY = "pathfinder-maze-config-v6";
 const GEN_TYPES = ["loops", "backtracker", "random", "empty"];
 const DEFAULT_MAZE_CONFIG: MazeConfig = {
   rows: 21, cols: 21, genType: "loops", density: 0.25, diagonal: false,
@@ -376,7 +376,7 @@ export const VisualizerPage: React.FC = () => {
   const winnerParticipant = winnerIdx !== null ? stats[winnerIdx] : null;
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-[1700px] mx-auto px-4 py-3 gap-3">
+    <div className="flex-1 flex flex-col w-full max-w-[1700px] mx-auto px-4 py-3 gap-3 min-h-0 h-[calc(100dvh-var(--nav-h,4rem))] overflow-hidden">
       {/* 1. Header Toolbar */}
       <VisualizerToolbar
         raceState={raceState}
@@ -421,7 +421,7 @@ export const VisualizerPage: React.FC = () => {
       )}
 
       {/* 2. Middle Row: [Toolbox] | [Stage] | [Racers] */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-3 min-h-[460px] items-stretch">
+      <div className="flex-1 flex flex-col lg:flex-row gap-3 min-h-0 items-stretch overflow-auto">
         {/* Left: Tile Palette & Legend (§3.5) */}
         <div id="toolbox-step" className="shrink-0">
           <TilePalette
@@ -435,7 +435,7 @@ export const VisualizerPage: React.FC = () => {
         </div>
 
         {/* Center: Stage Viewport (§3.4) */}
-        <main className="flex-1 flex flex-col bg-surface border border-border rounded-xl p-3 shadow-xs min-h-[420px] overflow-hidden">
+        <main className="flex-1 flex flex-col bg-surface border border-border rounded-xl p-3 shadow-xs min-h-0 min-w-0 overflow-hidden">
           {viewMode === "edit" ? (
             /* Large Single Canvas Editor */
             <div className="flex-1 flex flex-col items-center justify-center relative w-full h-full">

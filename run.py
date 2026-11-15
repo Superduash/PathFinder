@@ -45,6 +45,14 @@ if __name__ == "__main__":
 
     actual_port = find_available_port(args.host, args.port, max_attempts=5)
     url = f"http://{args.host}:{actual_port}"
+    
+    # Warn if the port differs from requested
+    if actual_port != args.port:
+        print("\n" + "⚠" * 30)
+        print(f"⚠ WARNING: Port {args.port} was busy, using {actual_port} instead")
+        print(f"⚠ For frontend dev, set environment variable:")
+        print(f"⚠   PF_BACKEND=http://{args.host}:{actual_port}")
+        print("⚠" * 30 + "\n")
 
     frontend_status = "built UI found \u2714" if FRONTEND_DIST.exists() else "run `npm run build` in frontend/ for UI"
 

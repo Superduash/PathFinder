@@ -107,7 +107,7 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                 </div>
 
                 {isWinner ? (
-                  <span className="flex items-center gap-0.5 px-1.5 py-0.2 rounded text-xs font-bold bg-brand text-brand-ink uppercase">
+                  <span className="flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-bold bg-brand text-brand-ink uppercase leading-none min-h-[20px]">
                     <Trophy className="w-2.5 h-2.5 fill-current" />
                     <span>Win</span>
                   </span>

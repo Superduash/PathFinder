@@ -7,11 +7,7 @@ OUTPUT_FILE = ROOT / "code.txt"
 
 # Current contract and core execution paths are exported first.
 PRIORITY_FILES = [
-    "README.md",
     "requirements.txt",
-    "polish4.md",
-    "docs/contract-notes.md",
-    "docs/behavior-report.md",
     "backend/app/search/engine.py",
     "backend/app/search/bidirectional.py",
     "backend/app/search/algorithms.py",
@@ -48,7 +44,7 @@ PRIORITY_FILES = [
 ]
 
 # Whitelist extensions
-VALID_EXTENSIONS = {".py", ".ts", ".tsx", ".css", ".html", ".json", ".md", ".mjs", ".txt"}
+VALID_EXTENSIONS = {".py", ".ts", ".tsx", ".css", ".html", ".json", ".mjs", ".txt"}
 
 # Exclude directories
 EXCLUDED_DIRS = {

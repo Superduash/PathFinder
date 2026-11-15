@@ -88,7 +88,7 @@ export const TilePalette: React.FC<TilePaletteProps> = ({
   disabled = false,
 }) => {
   return (
-    <aside className="w-40 shrink-0 flex flex-col gap-3 p-3 bg-surface border border-border rounded-xl shadow-xs select-none">
+    <aside className="w-56 shrink-0 flex flex-col gap-3 p-3 bg-surface border border-border rounded-xl shadow-xs select-none min-w-0">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold uppercase tracking-wider text-muted">
           Draw Palette
@@ -105,18 +105,18 @@ export const TilePalette: React.FC<TilePaletteProps> = ({
               disabled={disabled}
               onClick={() => onSelectTool(t.id)}
               title={t.desc}
-              className={`flex items-center justify-between p-2 rounded-lg border text-xs font-semibold transition-all ${
+              className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 min-w-0 p-2 rounded-lg border text-xs font-semibold transition-all overflow-visible ${
                 isActive
                   ? "border-brand bg-brand/10 ring-1 ring-brand text-brand shadow-xs"
                   : `${t.colorClass} border-transparent`
               } ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
             >
-              <div className="flex items-center gap-2">
+              <div className="contents">
                 <span className="shrink-0">{t.icon}</span>
-                <span className="truncate">{t.label}</span>
+                <span className="min-w-0 whitespace-nowrap">{t.label}</span>
               </div>
               <span
-                className={`text-xs px-1 py-0.5 rounded border font-mono ${t.costClass}`}
+                className={`shrink-0 whitespace-nowrap text-xs px-1.5 py-0.5 rounded border font-mono ${t.costClass}`}
               >
                 {t.cost}
               </span>

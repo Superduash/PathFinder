@@ -6,7 +6,11 @@ export class RaceSocket {
   private listeners: Map<string, Set<Listener>> = new Map();
   private pingInterval: any = null;
   private reconnectTimeout: any = null;
+  private connectTimer: any = null;
   private isClosedManually = false;
+  private shouldCloseOnOpen = false;
+  private reconnectDelay = 1000;
+  private maxReconnectDelay = 10000;
 
   constructor(url?: string) {
     if (url) {
@@ -15,27 +19,48 @@ export class RaceSocket {
       const loc = window.location;
       const proto = loc.protocol === "https:" ? "wss:" : "ws:";
       // In development, use relative path which will be proxied by Vite to backend
-      // In production, connect directly to backend
+      // In production, connect to same origin (works for any --port)
       if (import.meta.env.DEV) {
         // Use the frontend's host, proxy will forward to backend
         this.url = `${proto}//${loc.host}/ws/race`;
       } else {
-        // In production, connect to backend on port 8000
-        const host = loc.hostname;
-        this.url = `${proto}//${host}:8000/ws/race`;
+        // In production, connect to same host (FastAPI serves the built UI)
+        this.url = `${proto}//${loc.host}/ws/race`;
       }
     }
   }
 
   connect(): void {
     this.isClosedManually = false;
+    this.shouldCloseOnOpen = false;
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
+    // Defer connection to avoid StrictMode double-mount closing active socket
+    if (this.connectTimer) clearTimeout(this.connectTimer);
+    this.connectTimer = setTimeout(() => {
+      this.connectTimer = null;
+      this._doConnect();
+    }, 0);
+  }
+
+  private _doConnect(): void {
+    if (this.shouldCloseOnOpen) {
+      // Connection was cancelled while deferred
       return;
     }
 
     this.ws = new WebSocket(this.url);
 
     this.ws.onopen = () => {
+      if (this.shouldCloseOnOpen) {
+        // disconnect() was called while CONNECTING
+        this.ws?.close();
+        this.ws = null;
+        return;
+      }
+      this.reconnectDelay = 1000; // Reset backoff on successful connection
       this.emit("open", {});
       this.startPing();
     };
@@ -60,10 +85,14 @@ export class RaceSocket {
       this.stopPing();
       this.emit("close", {});
       if (!this.isClosedManually) {
+        // Emit offline state
+        this.emit("offline", {});
+        // Reconnect with exponential backoff
         if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = setTimeout(() => {
+          this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay);
           this.connect();
-        }, 1200);
+        }, this.reconnectDelay);
       }
     };
   }
@@ -103,10 +132,19 @@ export class RaceSocket {
 
   disconnect(): void {
     this.isClosedManually = true;
+    this.shouldCloseOnOpen = true;
     this.stopPing();
+    if (this.connectTimer) {
+      clearTimeout(this.connectTimer);
+      this.connectTimer = null;
+    }
     if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
     if (this.ws) {
-      this.ws.close();
+      if (this.ws.readyState === WebSocket.CONNECTING) {
+        // Will close in onopen handler
+      } else {
+        this.ws.close();
+      }
       this.ws = null;
     }
   }

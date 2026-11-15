@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import type { ParticipantStats } from "@/hooks/useRace";
 
@@ -24,7 +24,18 @@ export const NarratorBar: React.FC<NarratorBarProps> = ({
   serverNote,
   onRetry,
 }) => {
-  if (raceState === "disconnected") {
+  const [offlineVisible, setOfflineVisible] = useState(false);
+
+  useEffect(() => {
+    if (raceState !== "disconnected") {
+      setOfflineVisible(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setOfflineVisible(true), 1500);
+    return () => window.clearTimeout(timer);
+  }, [raceState]);
+
+  if (raceState === "disconnected" && offlineVisible) {
     return (
       <div className="w-full px-3.5 py-2 rounded-lg border border-danger/30 bg-danger/10 flex items-center justify-between text-sm text-text" aria-live="polite">
         <span>Can&apos;t reach the search server. Your maze is still safe.</span>

@@ -81,12 +81,12 @@ export const RacePanel: React.FC<RacePanelProps> = ({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isWinner && (
-            <span className="px-1.5 py-0.2 rounded text-xs font-bold bg-brand text-brand-ink uppercase tracking-wide">
+            <span className="px-2 py-0.5 rounded text-xs font-bold bg-brand text-brand-ink uppercase tracking-wide leading-none min-h-[20px] inline-flex items-center">
               WINNER
             </span>
           )}
           <span
-            className={`px-1.5 py-0.2 rounded text-xs font-medium ${
+            className={`px-2 py-0.5 rounded text-xs font-medium leading-none min-h-[20px] inline-flex items-center ${
               stats.status === "found"
                 ? "bg-success/15 text-success"
                 : stats.status === "failed"

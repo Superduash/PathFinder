@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { ALGORITHMS, ALGORITHM_VISUALS, getAlgorithmColor } from "@/lib/palette";
+import { notify } from "@/lib/notify";
 
 export interface ParticipantItem {
   algorithm: string;
@@ -30,6 +31,28 @@ export const RacerPicker: React.FC<RacerPickerProps> = ({
 }) => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme !== "light";
+  const prevDiagonalRef = useRef(diagonal);
+
+  // Auto-switch manhattan to octile when diagonal is turned on
+  useEffect(() => {
+    if (diagonal && !prevDiagonalRef.current) {
+      // Diagonal was just turned on
+      const needsUpdate = selected.some((p) =>
+        (p.algorithm === "greedy" || p.algorithm === "astar") && p.heuristic === "manhattan"
+      );
+      if (needsUpdate) {
+        onChange(
+          selected.map((p) =>
+            (p.algorithm === "greedy" || p.algorithm === "astar") && p.heuristic === "manhattan"
+              ? { ...p, heuristic: "octile" }
+              : p
+          )
+        );
+        notify.info("Switched to octile: Manhattan overestimates diagonal moves");
+      }
+    }
+    prevDiagonalRef.current = diagonal;
+  }, [diagonal, selected, onChange]);
 
   const isSelected = (id: string) => selected.some((p) => p.algorithm === id);
 
