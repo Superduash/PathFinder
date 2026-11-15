@@ -442,9 +442,6 @@ export const VisualizerPage: React.FC = () => {
               <div className="w-full max-w-[580px] aspect-square rounded-xl overflow-hidden border border-border shadow-xs bg-bg relative">
                 <canvas ref={canvasRef} className="w-full h-full block cursor-crosshair" {...handlers} />
               </div>
-              <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-surface-2 border border-border text-xs text-muted font-medium select-none">
-                Click & drag to draw · Switch to Race View to compare
-              </div>
             </div>
           ) : (
             /* Head-to-Head Multi-Racer Grid (1 to 6 Panels) */
