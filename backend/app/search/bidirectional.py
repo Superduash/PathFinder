@@ -121,19 +121,6 @@ class BidirectionalSearch:
 
         curr_dist = dist_this[curr]
 
-        # Check if waves just met
-        just_met = False
-        if curr in parent_other and self.meeting_cell is None:
-            just_met = True
-
-        # Check termination condition: if both frontiers have advanced past the best connection
-        front_f = self.dist_f.get(self.queue_f[0], curr_dist) if self.queue_f else curr_dist
-        front_b = self.dist_b.get(self.queue_b[0], curr_dist) if self.queue_b else curr_dist
-        if self.meeting_cell is not None and (front_f + front_b >= self.best_moves):
-            self._reconstruct_bds_path()
-            self.status = "found"
-            return True
-
         # Check neighbours
         for nr, nc, _ in self.maze.neighbours(curr[0], curr[1]):
             nb = (nr, nc)
@@ -153,9 +140,6 @@ class BidirectionalSearch:
                     if total_m < self.best_moves:
                         self.best_moves = total_m
                         self.meeting_cell = nb
-                        # Store that this is the meeting point for special visualization
-                        if not hasattr(self, 'meeting_tick'):
-                            self.meeting_tick = self.expanded_count
 
         # Alternate side for next tick
         self.current_side = "backward" if is_forward else "forward"
@@ -166,7 +150,7 @@ class BidirectionalSearch:
         if fc > self.peak_open_entries:
             self.peak_open_entries = fc
 
-        # Immediate stop if meeting reached optimal threshold
+        # Check termination condition: if frontiers have advanced past the best connection
         if self.meeting_cell is not None and q:
             min_next = dist_this[q[0]] if q else curr_dist
             other_q = self.queue_b if is_forward else self.queue_f
@@ -221,4 +205,11 @@ class BidirectionalSearch:
         moves, cost = route_stats(self.maze, full_path)
         self.path_length = moves
         self.path_cost = cost
+
+    def waiting_view(self, limit: int = 8) -> dict[str, list[tuple[int, int]]]:
+        """Return the next cells to be expanded from both queues."""
+        return {
+            "forward": list(self.queue_f)[:limit],
+            "backward": list(self.queue_b)[:limit]
+        }
 

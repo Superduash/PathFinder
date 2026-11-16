@@ -8,7 +8,7 @@ interface ResultStripProps {
   stats: ParticipantStats[];
   winnerIdx: number | null;
   maxExpandedSeen: number;
-  summary?: { explanations?: string[]; route_groups?: { ids: number[]; same_route: boolean; label: string }[] } | null;
+  summary?: any | null;
 }
 
 export const ResultStrip: React.FC<ResultStripProps> = ({
@@ -22,6 +22,10 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
   const [compareRoutes, setCompareRoutes] = useState(false);
 
   if (!stats || stats.length === 0) return null;
+
+  const effectiveWinnerIdx = summary?.awards?.best_overall?.id !== undefined
+    ? summary.awards.best_overall.id
+    : (summary ? null : winnerIdx);
 
   return (
     <div className="w-full flex flex-col gap-2 p-3 bg-surface border border-border rounded-xl shadow-xs select-none">
@@ -37,12 +41,12 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
           <button type="button" onClick={() => setCompareRoutes((open) => !open)} className="px-3 py-1.5 rounded-md border border-brand/40 text-brand font-semibold">
             {compareRoutes ? "Hide route comparison" : "Compare routes"}
           </button>
-          {summary.route_groups?.filter((group) => group.same_route).map((group) => (
+          {summary.route_groups?.filter((group: any) => group.same_route).map((group: any) => (
             <span key={group.ids.join(",")} className="px-2.5 py-1 rounded-full border border-border bg-surface-2 text-muted">
               {group.label} = same route
             </span>
           ))}
-          {summary.explanations?.map((explanation) => (
+          {summary.explanations?.map((explanation: any) => (
             <span key={explanation} className="text-text-2">{explanation}</span>
           ))}
         </div>
@@ -79,8 +83,12 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
             fullName: s.algorithm,
           };
           const color = getAlgorithmColor(algKey, isDark);
-          const isWinner = winnerIdx === idx && s.status === "found";
-          const workPercent = maxExpandedSeen > 0 ? (s.expanded / maxExpandedSeen) * 100 : 0;
+          const res = summary?.results?.[idx];
+          const isWinner = effectiveWinnerIdx === idx && (res ? res.status === "found" : s.status === "found");
+          const checkedCount = res ? res.checked : s.expanded;
+          const routeSteps = res ? res.route_steps : s.pathLength;
+          const routeCost = res ? res.route_cost : s.pathCost;
+          const workPercent = maxExpandedSeen > 0 ? (checkedCount / maxExpandedSeen) * 100 : 0;
 
           return (
             <div
@@ -124,7 +132,7 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
               <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs py-1 border-t border-border/60">
                 <div className="flex justify-between">
                   <span className="text-muted">Checked:</span>
-                  <span className="font-mono font-bold text-text">{s.expanded}</span>
+                  <span className="font-mono font-bold text-text">{checkedCount}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted">Waiting:</span>
@@ -133,13 +141,13 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                 <div className="flex justify-between">
                   <span className="text-muted">Steps:</span>
                   <span className="font-mono font-bold text-brand">
-                    {s.pathLength !== undefined && s.pathLength !== null ? s.pathLength : "—"}
+                    {routeSteps !== undefined && routeSteps !== null ? routeSteps : "—"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted">Cost:</span>
                   <span className="font-mono font-medium text-text">
-                    {s.pathCost !== undefined && s.pathCost !== null ? s.pathCost : "—"}
+                    {routeCost !== undefined && routeCost !== null ? routeCost : "—"}
                   </span>
                 </div>
               </div>

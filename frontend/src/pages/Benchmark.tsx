@@ -476,7 +476,7 @@ export const BenchmarkPage: React.FC = () => {
                   {methodology && <Card>
                     <CardHeader><CardTitle>Methodology</CardTitle><CardDescription>How these measurements are produced.</CardDescription></CardHeader>
                     <CardContent className="grid md:grid-cols-2 gap-3 text-sm text-muted">
-                      {Object.entries(methodology).map(([key, value]) => <p key={key}><strong className="text-text capitalize">{key}: </strong>{value}</p>)}
+                      {Object.entries(methodology).map(([key, value]) => <p key={key}><strong className="text-text capitalize">{key}: </strong>{String(value)}</p>)}
                     </CardContent>
                   </Card>}
 

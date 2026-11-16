@@ -46,6 +46,8 @@ def test_websocket_race_session():
 
         assert done is True
         summary_msg = websocket.receive_json()
+        if summary_msg["type"] == "error":
+            print(f"ERROR: {summary_msg.get('code')} - {summary_msg.get('message')}")
         assert summary_msg["type"] == "race.summary"
         assert len(summary_msg["ranking"]) == 2
 

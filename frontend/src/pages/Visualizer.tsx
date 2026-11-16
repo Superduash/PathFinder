@@ -220,7 +220,7 @@ export const VisualizerPage: React.FC = () => {
         });
         
         if (!validation.solvable && !suppressToast) {
-          notify.warning("⚠️ No path exists! Try: lower density, different seed, or click 'New maze'");
+          notify.warning("No path exists! Try: lower density, different seed, or click 'New maze'");
         } else if (!suppressToast) {
           if (cfg.genType === "empty") {
             notify.info(`Empty ${cfg.rows}×${cfg.cols} grid (no obstacles)`);

@@ -64,7 +64,7 @@ const ALGORITHM_CARDS = [
     id: "astar",
     name: "A*",
     fullName: "A* Search",
-    shape: "★",
+    shape: "star",
     color: "var(--alg-astar)",
     description: "Balances path cost with distance estimates. Optimal efficiency with admissible heuristics.",
     chips: ["Shortest Path Guaranteed", "Uses Distance Hint", "Smart & Optimal"],
@@ -197,7 +197,7 @@ export const LandingPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-alg-bfs">● BFS</span>
+                <span className="font-bold text-alg-bfs">BFS</span>
                 <span className="text-muted tabular-nums text-xs">{bfsStats?.expanded || 0} checked</span>
               </div>
               <div className="w-full aspect-square rounded-xl overflow-hidden border border-border bg-bg">
@@ -207,7 +207,7 @@ export const LandingPage: React.FC = () => {
 
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-alg-astar">★ A*</span>
+                <span className="font-bold text-alg-astar">A*</span>
                 <span className="text-muted tabular-nums text-xs">{astarStats?.expanded || 0} checked</span>
               </div>
               <div className="w-full aspect-square rounded-xl overflow-hidden border border-border bg-bg">

@@ -231,3 +231,20 @@ class Search:
         self.path_length = moves
         self.path_cost = cost
 
+    def waiting_view(self, limit: int = 8) -> dict[str, list[tuple[int, int]]]:
+        """The next `limit` waiting cells in the exact order the algorithm will take them."""
+        if self.kind == "bfs":
+            cells = list(self.waiting)[:limit]  # front of the queue first
+        elif self.kind == "dfs":
+            cells = list(reversed(self.waiting))[:limit]  # top of the stack first
+        else:  # heap items are (priority, h, tie, cell)
+            cells, seen = [], set()
+            for item in heapq.nsmallest(limit * 4, self.waiting):
+                cell = item[3]
+                if cell not in self.closed and cell not in seen:
+                    seen.add(cell)
+                    cells.append(cell)
+                if len(cells) == limit:
+                    break
+        return {"main": cells}
+

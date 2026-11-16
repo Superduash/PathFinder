@@ -1,412 +1,396 @@
-import React, { useState } from "react";
-import { X, Trophy, Medal, ChevronDown, ChevronUp } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { useTheme } from "next-themes";
+import {
+  X,
+  Trophy,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw,
+  ArrowUpDown,
+  GitCompare,
+} from "lucide-react";
+import { getAlgorithmColor, ALGORITHM_VISUALS } from "@/lib/palette";
+import type { RaceSummary, RaceResult } from "@/lib/types";
 
 interface RaceInsightsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  summary: any | null;
+  summary: RaceSummary | null;
   onRaceAgain: () => void;
+  onCompareRoutes?: () => void;
 }
 
-interface AlgorithmColors {
-  [key: string]: { main: string; soft: string };
-}
-
-const ALGORITHM_COLORS: AlgorithmColors = {
-  bfs: { main: "#38BDF8", soft: "rgba(56, 189, 248, 0.22)" },
-  dfs: { main: "#FB923C", soft: "rgba(251, 146, 60, 0.22)" },
-  ucs: { main: "#A78BFA", soft: "rgba(167, 139, 250, 0.22)" },
-  greedy: { main: "#F472B6", soft: "rgba(244, 114, 182, 0.22)" },
-  astar: { main: "#34D399", soft: "rgba(52, 211, 153, 0.22)" },
-  bds: { main: "#FACC15", soft: "rgba(250, 204, 21, 0.22)" },
-};
-
-const ALGORITHM_NAMES: { [key: string]: string } = {
-  bfs: "BFS",
-  dfs: "DFS",
-  ucs: "UCS",
-  greedy: "Greedy Best-First",
-  astar: "A* Search",
-  bds: "Bidirectional Search",
-};
+type SortField = "rank" | "label" | "checked" | "route_steps" | "route_cost" | "quality" | "search_ms";
 
 export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
   isOpen,
   onClose,
   summary,
   onRaceAgain,
+  onCompareRoutes,
 }) => {
-  const [showAllRacers, setShowAllRacers] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== "light";
+
+  const [sortField, setSortField] = useState<SortField>("rank");
+  const [sortAsc, setSortAsc] = useState<boolean>(true);
+
+  const rawResults = summary?.results;
+  const results: RaceResult[] = useMemo(() => rawResults || [], [rawResults]);
+  const awards = summary?.awards;
+  const bestId = awards?.best_overall?.id;
+  const bestResult = bestId !== null && bestId !== undefined ? results.find((r) => r.id === bestId) : null;
+  const bestReason = awards?.best_overall?.reason || summary?.winner_reason || "No route exists.";
+
+  const sortedResults = useMemo(() => {
+    const list = [...results];
+    list.sort((a, b) => {
+      let va: any = a[sortField];
+      let vb: any = b[sortField];
+      if (va === null || va === undefined) va = sortAsc ? Infinity : -Infinity;
+      if (vb === null || vb === undefined) vb = sortAsc ? Infinity : -Infinity;
+      if (typeof va === "string") {
+        return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+      }
+      return sortAsc ? va - vb : vb - va;
+    });
+    return list;
+  }, [results, sortField, sortAsc]);
 
   if (!isOpen || !summary) return null;
 
-  // Calculate scores for ALL successful participants using backend's scoring logic
-  const successfulIndices = summary.participants
-    .map((p: any, i: number) => ({ index: i, participant: p }))
-    .filter((item: any) => item.participant.status === "found");
-
-  const scores: { [key: number]: { total: number; quality: number; efficiency: number; speed: number } } = {};
-  
-  if (successfulIndices.length > 0) {
-    // Find best values for normalization
-    const minCost = Math.min(...successfulIndices.map((item: any) => item.participant.pathCost || Infinity));
-    const minExpanded = Math.min(...successfulIndices.map((item: any) => item.participant.expanded));
-    const minTime = Math.min(...successfulIndices.map((item: any) => item.participant.compute_ms || Infinity));
-
-    successfulIndices.forEach((item: any) => {
-      const cost = item.participant.pathCost || Infinity;
-      const expanded = item.participant.expanded;
-      const time = item.participant.compute_ms || Infinity;
-
-      // Normalize each metric (100 = best)
-      const qualityScore = cost !== Infinity ? 100.0 * (minCost / cost) : 0;
-      const efficiencyScore = 100.0 * (minExpanded / expanded);
-      const speedScore = time !== Infinity ? 100.0 * (minTime / time) : 0;
-
-      // Weighted combination: 40% quality, 35% efficiency, 25% speed
-      const totalScore = 0.40 * qualityScore + 0.35 * efficiencyScore + 0.25 * speedScore;
-      
-      scores[item.index] = {
-        total: totalScore,
-        quality: qualityScore,
-        efficiency: efficiencyScore,
-        speed: speedScore,
-      };
-    });
-  }
-
-  // Sort by score to find winner and runner-up
-  const sortedByScore = [...successfulIndices].sort((a: any, b: any) => {
-    const scoreA = scores[a.index]?.total || 0;
-    const scoreB = scores[b.index]?.total || 0;
-    return scoreB - scoreA;
-  });
-
-  const winner = sortedByScore.length > 0 ? sortedByScore[0].index : summary.awards?.best_overall?.id;
-  const winnerData = winner !== undefined && winner !== null ? summary.participants[winner] : null;
-  const winnerScore = winner !== undefined && winner !== null ? scores[winner] : undefined;
-
-  const runnerUp = sortedByScore.length > 1 ? sortedByScore[1].index : null;
-  const runnerUpData = runnerUp !== null ? summary.participants[runnerUp] : null;
-  const runnerUpScore = runnerUp !== null ? scores[runnerUp] : undefined;
-
-  const getAlgorithmColor = (algorithm: string) => {
-    return ALGORITHM_COLORS[algorithm.toLowerCase()] || { main: "#2DD4BF", soft: "rgba(45, 212, 191, 0.22)" };
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortField(field);
+      setSortAsc(true);
+    }
   };
 
-  const getAlgorithmName = (algorithm: string) => {
-    return ALGORITHM_NAMES[algorithm.toLowerCase()] || algorithm.toUpperCase();
-  };
+  const bestVisual = bestResult ? ALGORITHM_VISUALS[bestResult.algorithm.toLowerCase()] : null;
+  const bestColor = bestResult ? getAlgorithmColor(bestResult.algorithm.toLowerCase(), isDark) : "#4C9AFF";
 
-  const generateComparison = () => {
-    if (!winnerData || !runnerUpData || !winnerScore || !runnerUpScore) return "";
-
-    const winnerAlg = getAlgorithmName(winnerData.algorithm);
-
-    const parts = [];
-
-    // Compare efficiency
-    if (winnerScore.efficiency > runnerUpScore.efficiency + 5) {
-      const ratio = (runnerUpData.expanded / winnerData.expanded).toFixed(1);
-      parts.push(`explored ${ratio}× fewer cells than ${getAlgorithmName(runnerUpData.algorithm)}`);
-    }
-
-    // Compare speed
-    if (winnerScore.speed > runnerUpScore.speed + 5 && winnerData.compute_ms && runnerUpData.compute_ms) {
-      const ratio = (runnerUpData.compute_ms / winnerData.compute_ms).toFixed(1);
-      parts.push(`ran ${ratio}× faster`);
-    }
-
-    // Compare path quality
-    const winnerCost = winnerData.pathCost || 0;
-    const runnerUpCost = runnerUpData.pathCost || 0;
-    
-    if (winnerCost > 0 && runnerUpCost > 0) {
-      if (winnerCost > runnerUpCost * 1.05) {
-        const diff = Math.round(((winnerCost / runnerUpCost - 1) * 100) * 10) / 10;
-        parts.push(`but found a ${diff}% more expensive route`);
-      } else if (runnerUpCost > winnerCost * 1.05) {
-        const diff = Math.round(((runnerUpCost / winnerCost - 1) * 100) * 10) / 10;
-        parts.push(`and found a ${diff}% cheaper route`);
-      }
-    }
-
-    if (parts.length === 0) {
-      return `${winnerAlg} won with balanced performance across all metrics (score: ${winnerScore.total.toFixed(1)}).`;
-    }
-
-    const mainPart = parts[0];
-    const additionalParts = parts.slice(1);
-    
-    if (additionalParts.length === 0) {
-      return `${winnerAlg} won because it ${mainPart}.`;
-    }
-
-    return `${winnerAlg} won because it ${mainPart}, ${additionalParts.join(", ")}.`;
-  };
-
-  const generateTakeaway = () => {
-    if (!winnerData || !runnerUpData) return "";
-
-    const winnerAlg = winnerData.algorithm.toLowerCase();
-    const runnerUpAlg = runnerUpData.algorithm.toLowerCase();
-
-    if (winnerAlg === "greedy" && runnerUpAlg === "astar") {
-      return "Greedy prioritizes reaching the goal quickly using a heuristic. A* balances the distance already travelled with an estimate of the remaining distance. Greedy can be faster, but A* provides optimality when its heuristic is admissible.";
-    }
-
-    if (winnerAlg === "astar" && runnerUpAlg === "greedy") {
-      return "A* found the optimal path by considering both actual cost (g) and heuristic estimate (h). Greedy only considers the heuristic, which can lead to faster searches but suboptimal paths.";
-    }
-
-    if (winnerAlg === "ucs" && runnerUpAlg === "bfs") {
-      return "UCS accounts for varying terrain costs, while BFS treats all moves equally. When terrain matters, UCS finds cheaper routes at the cost of more exploration.";
-    }
-
-    if (winnerAlg === "bfs" && runnerUpAlg === "dfs") {
-      return "BFS explores systematically by distance, guaranteeing the shortest path. DFS follows deep paths before backtracking, which can be faster but may miss shorter routes.";
-    }
-
-    return `${getAlgorithmName(winnerData.algorithm)} and ${getAlgorithmName(runnerUpData.algorithm)} use different exploration strategies. The winner depends on maze layout, terrain costs, and the chosen performance priorities.`;
-  };
-
-  const MetricCard: React.FC<{ label: string; value: string | number; highlight?: boolean }> = ({
-    label,
-    value,
-    highlight,
-  }) => (
-    <div className={`text-center px-3 py-2 rounded-lg ${highlight ? "bg-brand/10 border border-brand/30" : "bg-surface-3"}`}>
-      <div className="text-2xl font-bold font-display text-text">{value}</div>
-      <div className="text-xs text-muted mt-0.5">{label}</div>
-    </div>
-  );
+  // Award racer names
+  const shortestRacers = awards?.shortest_route?.ids?.map((id) => results.find((r) => r.id === id)?.label || `Racer ${id}`).join(", ") || "None";
+  const fewestRacer = awards?.fewest_checked?.id !== null && awards?.fewest_checked?.id !== undefined
+    ? results.find((r) => r.id === awards.fewest_checked?.id)?.label || `Racer ${awards.fewest_checked?.id}`
+    : "None";
+  const fastestRacer = awards?.fastest_search?.id !== null && awards?.fastest_search?.id !== undefined
+    ? results.find((r) => r.id === awards.fastest_search?.id)?.label || `Racer ${awards.fastest_search?.id}`
+    : "None";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-surface border border-border rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+      <div className="bg-surface border border-border rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden text-text animate-in fade-in zoom-in-95 duration-200">
+        {/* 1. Header */}
+        <div className="p-5 border-b border-border flex items-start justify-between gap-4 bg-surface-2">
           <div>
-            <h2 className="text-xl font-bold font-display text-text">Race Insights</h2>
-            <p className="text-sm text-muted">Understanding the results · Current maze</p>
+            <h2 className="text-xl font-bold font-heading text-text">Race results</h2>
+            <p className="text-sm text-muted mt-0.5">
+              Ranked by: shortest route first, then fewest cells checked.
+            </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-surface-2 text-muted hover:text-text transition-colors"
+            className="p-2 rounded-xl hover:bg-surface border border-border text-muted hover:text-text transition-colors"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Winner Section */}
-          {winnerData && winnerScore && (
+        <div className="p-5 overflow-y-auto space-y-5 flex-1 text-sm">
+          {/* 2. Best Result Card */}
+          {bestResult && (
             <div
-              className="border-2 rounded-xl p-5"
-              style={{
-                borderColor: getAlgorithmColor(winnerData.algorithm).main,
-                backgroundColor: getAlgorithmColor(winnerData.algorithm).soft,
-              }}
+              className="p-5 rounded-2xl border-2 bg-surface-2 space-y-3"
+              style={{ borderColor: bestColor }}
             >
-              <div className="flex items-start gap-3 mb-4">
+              <div className="flex items-center gap-3">
                 <div
-                  className="p-2 rounded-lg"
-                  style={{ backgroundColor: getAlgorithmColor(winnerData.algorithm).main }}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
+                  style={{ backgroundColor: bestColor }}
                 >
-                  <Trophy className="w-5 h-5 text-white" />
+                  <Trophy className="w-5 h-5 fill-current" />
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs font-bold uppercase tracking-wide text-muted mb-1">
-                    🏆 1st Place
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-base text-text">{bestResult.label}</span>
+                    <span className="text-xs text-muted">
+                      ({bestVisual?.fullName || bestResult.algorithm.toUpperCase()})
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-brand/20 text-brand text-xs font-bold">
+                      Best Overall
+                    </span>
                   </div>
-                  <h3 className="text-xl font-bold font-display text-text">
-                    {getAlgorithmName(winnerData.algorithm)}
-                  </h3>
-                </div>
-                <div className="text-right">
-                  <div className="text-4xl font-bold font-display" style={{ color: getAlgorithmColor(winnerData.algorithm).main }}>
-                    {winnerScore.total.toFixed(1)}
-                  </div>
-                  <div className="text-xs text-muted">Weighted score</div>
+                  <p className="text-sm text-muted mt-0.5">{bestReason}</p>
                 </div>
               </div>
 
-              <p className="text-sm text-text-2 mb-4">
-                {generateComparison()}
-              </p>
-
-              <div className="grid grid-cols-3 gap-3">
-                <MetricCard label="Cells checked" value={winnerData.expanded} />
-                <MetricCard
-                  label="Route cost"
-                  value={winnerData.pathCost !== undefined && winnerData.pathCost !== null ? winnerData.pathCost.toFixed(1) : "N/A"}
-                  highlight={winnerData.optimality === 1.0}
-                />
-                <MetricCard label="Path length" value={winnerData.pathLength !== undefined && winnerData.pathLength !== null ? winnerData.pathLength : "N/A"} />
+              {/* Three Metric Tiles */}
+              <div className="grid grid-cols-3 gap-3 pt-2">
+                <div className="p-3 rounded-xl bg-surface border border-border">
+                  <div className="text-xs text-muted">Cells checked</div>
+                  <div className="text-lg font-bold font-mono text-text mt-0.5">
+                    {bestResult.checked}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-surface border border-border">
+                  <div className="text-xs text-muted">Route cost</div>
+                  <div className="text-lg font-bold font-mono text-text mt-0.5">
+                    {bestResult.status === "failed" ? "No route" : bestResult.route_cost ?? "—"}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-surface border border-border">
+                  <div className="text-xs text-muted">Route steps</div>
+                  <div className="text-lg font-bold font-mono text-text mt-0.5">
+                    {bestResult.status === "failed" ? "No route" : bestResult.route_steps ?? "—"}
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Runner-up Section */}
-          {runnerUpData && runnerUpScore && (
-            <div className="border rounded-xl p-5 bg-surface-2 border-border">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-surface-3">
-                  <Medal className="w-5 h-5 text-muted" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-xs font-bold uppercase tracking-wide text-muted mb-1">
-                    🥈 2nd Place
-                  </div>
-                  <h3 className="text-lg font-bold font-display text-text">
-                    {getAlgorithmName(runnerUpData.algorithm)}
-                  </h3>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl font-bold font-display text-text">
-                    {runnerUpScore.total.toFixed(1)}
-                  </div>
-                  <div className="text-xs text-muted">Score</div>
-                </div>
+          {/* 3. Award Tiles */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3.5 rounded-xl bg-surface-2 border border-border">
+              <div className="flex items-center justify-between text-xs text-muted mb-1">
+                <span>Shortest route</span>
+                <span title="Racers who found an optimal route with minimum total cost">
+                  <Info className="w-3.5 h-3.5 text-muted hover:text-text cursor-help" />
+                </span>
               </div>
-
-              <p className="text-sm text-text-2 mb-4">
-                {runnerUpData.optimality === 1.0
-                  ? `${getAlgorithmName(runnerUpData.algorithm)} found an optimal route with cost ${runnerUpData.pathCost !== undefined && runnerUpData.pathCost !== null ? runnerUpData.pathCost.toFixed(1) : "unknown"}.`
-                  : `${getAlgorithmName(runnerUpData.algorithm)} explored ${runnerUpData.expanded} cells and found a route.`}
-              </p>
-
-              <div className="grid grid-cols-3 gap-3">
-                <MetricCard label="Cells checked" value={runnerUpData.expanded} />
-                <MetricCard
-                  label="Route cost"
-                  value={runnerUpData.pathCost !== undefined && runnerUpData.pathCost !== null ? runnerUpData.pathCost.toFixed(1) : "N/A"}
-                  highlight={runnerUpData.optimality === 1.0}
-                />
-                <MetricCard label="Path length" value={runnerUpData.pathLength !== undefined && runnerUpData.pathLength !== null ? runnerUpData.pathLength : "N/A"} />
+              <div className="font-semibold text-text truncate">{shortestRacers}</div>
+              <div className="text-xs text-muted font-mono mt-0.5">
+                Cost: {awards?.shortest_route?.cost ?? "—"}
               </div>
             </div>
-          )}
 
-          {/* Learning Takeaway */}
-          {winnerData && runnerUpData && (
-            <div className="bg-surface-2 border border-border rounded-xl p-5">
-              <h4 className="text-sm font-bold font-display text-text mb-2">
-                💡 What should you learn from this race?
-              </h4>
-              <p className="text-sm text-text-2 leading-relaxed">{generateTakeaway()}</p>
-            </div>
-          )}
-
-          {/* Scoring Transparency */}
-          <div className="bg-surface-2 border border-border rounded-xl p-5">
-            <h4 className="text-sm font-bold font-display text-text mb-3">⚖️ Scoring Weights</h4>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-text-2">Path Quality (lower cost)</span>
-                <span className="font-bold font-mono text-brand">40%</span>
+            <div className="p-3.5 rounded-xl bg-surface-2 border border-border">
+              <div className="flex items-center justify-between text-xs text-muted mb-1">
+                <span>Fewest checked</span>
+                <span title="Racer that checked the minimal number of maze cells">
+                  <Info className="w-3.5 h-3.5 text-muted hover:text-text cursor-help" />
+                </span>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-text-2">Search Efficiency (fewer cells)</span>
-                <span className="font-bold font-mono text-brand">35%</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-text-2">Execution Speed (faster time)</span>
-                <span className="font-bold font-mono text-brand">25%</span>
+              <div className="font-semibold text-text truncate">{fewestRacer}</div>
+              <div className="text-xs text-muted font-mono mt-0.5">
+                {awards?.fewest_checked?.value !== null && awards?.fewest_checked?.value !== undefined
+                  ? `${awards.fewest_checked.value} cells`
+                  : "—"}
               </div>
             </div>
-            <p className="text-xs text-muted mt-3">
-              The winner depends on these selected priorities. Different weights would produce different results.
-            </p>
+
+            <div className="p-3.5 rounded-xl bg-surface-2 border border-border">
+              <div className="flex items-center justify-between text-xs text-muted mb-1">
+                <span>Fastest search (indicative)</span>
+                <span title="Execution compute time on server">
+                  <Info className="w-3.5 h-3.5 text-muted hover:text-text cursor-help" />
+                </span>
+              </div>
+              <div className="font-semibold text-text truncate">{fastestRacer}</div>
+              <div className="text-xs text-muted font-mono mt-0.5">
+                {awards?.fastest_search?.within_noise
+                  ? "too close to call"
+                  : awards?.fastest_search?.ms !== null && awards?.fastest_search?.ms !== undefined
+                  ? `${awards.fastest_search.ms} ms`
+                  : "—"}
+              </div>
+            </div>
           </div>
 
-          {/* Compare All Racers (Expandable) */}
-          <div className="border border-border rounded-xl overflow-hidden">
-            <button
-              onClick={() => setShowAllRacers(!showAllRacers)}
-              className="w-full px-5 py-3 flex items-center justify-between bg-surface-2 hover:bg-surface-3 transition-colors"
-            >
-              <span className="text-sm font-bold font-display text-text">
-                Compare All {summary.participants.length} Racers
-              </span>
-              {showAllRacers ? (
-                <ChevronUp className="w-4 h-4 text-muted" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-muted" />
-              )}
-            </button>
-
-            {showAllRacers && (
-              <div className="p-5 bg-surface space-y-3">
-                {/* Sort ALL participants by score (successful first, then failed) */}
-                {summary.participants
-                  .map((p: any, i: number) => ({ participant: p, index: i, score: scores[i] }))
-                  .sort((a: any, b: any) => {
-                    // Successful searches first
-                    if (a.participant.status === "found" && b.participant.status !== "found") return -1;
-                    if (a.participant.status !== "found" && b.participant.status === "found") return 1;
-                    // Then by score
-                    const scoreA = a.score?.total || 0;
-                    const scoreB = b.score?.total || 0;
-                    return scoreB - scoreA;
-                  })
-                  .map((item: any, rank: number) => {
-                    const p = item.participant;
-                    const i = item.index;
-                    const colors = getAlgorithmColor(p.algorithm);
-                    const isWinner = i === winner;
-                    const isRunnerUp = i === runnerUp;
-                    const score = item.score;
-
-                    return (
-                      <div
-                        key={i}
-                        className="flex items-center gap-3 p-3 rounded-lg border"
-                        style={{
-                          borderColor: isWinner || isRunnerUp ? colors.main : "var(--border)",
-                          backgroundColor: isWinner || isRunnerUp ? colors.soft : "var(--surface-2)",
-                        }}
-                      >
-                        <div className="flex-shrink-0 w-8 text-center">
-                          <span className="text-sm font-bold text-muted">#{rank + 1}</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-bold font-display text-text">
-                            {getAlgorithmName(p.algorithm)}
-                            {isWinner && " 🏆"}
-                            {isRunnerUp && " 🥈"}
-                          </div>
-                          <div className="text-xs text-muted">
-                            {p.status === "found"
-                              ? `${p.expanded} cells · Cost ${p.pathCost !== undefined && p.pathCost !== null ? p.pathCost.toFixed(1) : "N/A"} · ${p.optimality === 1.0 ? "Optimal" : p.optimality && p.optimality > 0.95 ? "Near-optimal" : "Suboptimal"}`
-                              : "Failed to find route"}
-                          </div>
-                        </div>
-                        {score && (
-                          <div className="flex-shrink-0 text-right">
-                            <div className="text-sm font-bold font-mono text-text">{score.total.toFixed(1)}</div>
-                            <div className="text-xs text-muted">Score</div>
-                          </div>
-                        )}
+          {/* 4. Insights List */}
+          {(summary.insights.length > 0 || summary.explanations.length > 0) && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Analysis & Insights</h3>
+              <div className="space-y-1.5">
+                {summary.insights.map((ins, idx) => {
+                  const tone = ins.tone;
+                  return (
+                    <div
+                      key={ins.id || idx}
+                      className="p-3 rounded-xl border border-border bg-surface-2 flex items-start gap-2.5 text-sm"
+                    >
+                      {tone === "good" ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      ) : tone === "warn" ? (
+                        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                      ) : (
+                        <Info className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        {ins.title && <span className="font-semibold text-text mr-1.5">{ins.title}:</span>}
+                        <span className="text-muted">{ins.text}</span>
                       </div>
+                    </div>
+                  );
+                })}
+                {summary.explanations.map((exp, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl border border-border bg-surface-2 flex items-start gap-2.5 text-sm"
+                  >
+                    <Info className="w-4 h-4 text-muted shrink-0 mt-0.5" />
+                    <span className="text-muted">{exp}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 5. All Racers Table */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted">All racers</h3>
+            <div className="overflow-x-auto border border-border rounded-xl">
+              <table className="w-full text-sm text-left border-collapse">
+                <thead className="bg-surface-2 border-b border-border text-xs text-muted select-none">
+                  <tr>
+                    <th
+                      className="px-3 py-2.5 cursor-pointer hover:text-text"
+                      onClick={() => handleSort("rank")}
+                    >
+                      <div className="flex items-center gap-1">
+                        Rank
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                    <th
+                      className="px-3 py-2.5 cursor-pointer hover:text-text"
+                      onClick={() => handleSort("label")}
+                    >
+                      <div className="flex items-center gap-1">
+                        Racer
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                    <th
+                      className="px-3 py-2.5 text-right cursor-pointer hover:text-text"
+                      onClick={() => handleSort("checked")}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        Checked
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                    <th
+                      className="px-3 py-2.5 text-right cursor-pointer hover:text-text"
+                      onClick={() => handleSort("route_steps")}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        Steps
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                    <th
+                      className="px-3 py-2.5 text-right cursor-pointer hover:text-text"
+                      onClick={() => handleSort("route_cost")}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        Cost
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                    <th
+                      className="px-3 py-2.5 text-right cursor-pointer hover:text-text"
+                      onClick={() => handleSort("quality")}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        Quality %
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                    <th
+                      className="px-3 py-2.5 text-right cursor-pointer hover:text-text"
+                      onClick={() => handleSort("search_ms")}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        Search ms
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {sortedResults.map((r) => {
+                    const isShortest = awards?.shortest_route?.ids?.includes(r.id);
+                    const color = getAlgorithmColor(r.algorithm.toLowerCase(), isDark);
+                    return (
+                      <tr key={r.id} className="hover:bg-surface-2/50 transition-colors">
+                        <td className="px-3 py-2.5 font-bold tabular-nums">#{r.rank ?? r.id + 1}</td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: color }}
+                            />
+                            <span className="font-semibold text-text">{r.label}</span>
+                            {isShortest && (
+                              <span className="px-1.5 py-0.5 rounded bg-brand/15 text-brand text-[11px] font-bold">
+                                Shortest
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums">{r.checked}</td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums">
+                          {r.status === "failed" ? (
+                            <span className="text-danger">No route</span>
+                          ) : (
+                            r.route_steps ?? "—"
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums">
+                          {r.status === "failed" ? (
+                            <span className="text-danger">No route</span>
+                          ) : (
+                            r.route_cost ?? "—"
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums">
+                          {r.quality ? `${Math.round(r.quality * 100)}%` : "—"}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono tabular-nums text-muted">
+                          {r.search_ms.toFixed(2)} ms
+                        </td>
+                      </tr>
                     );
                   })}
-              </div>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* 6. Footer Buttons */}
+        <div className="p-4 border-t border-border flex items-center justify-between gap-3 bg-surface-2">
+          <div className="flex items-center gap-2">
+            {onCompareRoutes && (
+              <button
+                type="button"
+                onClick={onCompareRoutes}
+                className="px-4 py-2.5 rounded-xl border border-border hover:bg-surface text-text font-semibold flex items-center gap-2 text-sm transition-colors"
+              >
+                <GitCompare className="w-4 h-4" />
+                Compare routes
+              </button>
             )}
           </div>
-
-          {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={onRaceAgain}
-              className="flex-1 px-4 py-2.5 rounded-lg bg-brand hover:brightness-110 text-brand-ink font-bold text-sm transition-all shadow-sm"
+              className="px-4 py-2.5 rounded-xl bg-brand text-brand-ink font-bold flex items-center gap-2 text-sm hover:opacity-90 transition-opacity"
             >
-              Race Again
+              <RotateCcw className="w-4 h-4" />
+              Race again
             </button>
             <button
+              type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-lg border border-border bg-surface-2 hover:bg-surface text-text font-bold text-sm transition-colors"
+              className="px-4 py-2.5 rounded-xl border border-border hover:bg-surface text-text font-semibold text-sm transition-colors"
             >
               Close
             </button>

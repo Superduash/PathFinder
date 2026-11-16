@@ -141,6 +141,21 @@ export interface RaceCurrent {
   cell: [number, number];
 }
 
+export interface RaceResult {
+  id: number;
+  algorithm: string;
+  heuristic: string | null;
+  label: string;
+  status: "found" | "failed" | "running" | "init";
+  reason?: string | null;
+  checked: number;
+  route_steps: number | null;
+  route_cost: number | null;
+  quality: number | null;
+  search_ms: number;
+  rank?: number;
+}
+
 export interface RaceAward {
   id?: number | null;
   ids?: number[];
@@ -152,7 +167,26 @@ export interface RaceAward {
 }
 
 export interface RaceSummary {
-  awards: Record<string, RaceAward>;
+  raceId: string;
+  participants: any[];
+  results: RaceResult[];
+  ranking: number[];
+  insights: Array<{
+    id?: string;
+    tone?: "info" | "warn" | "good" | string;
+    title?: string;
+    text?: string;
+  }>;
+  winner_reason: string;
+  reachable: boolean;
+  optimal_cost: number | null;
+  awards: {
+    best_overall?: { id: number | null; reason: string };
+    fewest_checked?: { id: number | null; value: number | null };
+    shortest_route?: { ids: number[]; cost: number | null };
+    fastest_search?: { id: number | null; ms: number | null; within_noise: boolean };
+    [key: string]: any;
+  };
   route_groups: Array<{ ids: number[]; same_route: boolean; label: string }>;
   explanations: string[];
 }

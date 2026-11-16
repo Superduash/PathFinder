@@ -187,12 +187,11 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
     });
 
     socket.on("race.summary", (msg: any) => {
-      if (msg.ranking && msg.ranking.length > 0) {
-        setWinnerIdx(msg.ranking[0]);
-        if (msg.winner_reason) setWinnerReason(msg.winner_reason);
-        if (msg.insights) setInsights(msg.insights);
-        setRaceSummary(msg);
-      }
+      const bestId = msg.awards?.best_overall?.id !== undefined ? msg.awards.best_overall.id : (msg.ranking && msg.ranking.length > 0 ? msg.ranking[0] : null);
+      setWinnerIdx(bestId ?? null);
+      if (msg.winner_reason) setWinnerReason(msg.winner_reason);
+      if (msg.insights) setInsights(msg.insights);
+      setRaceSummary(msg);
     });
 
     socket.connect();

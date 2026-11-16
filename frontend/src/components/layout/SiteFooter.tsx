@@ -21,7 +21,7 @@ export const SiteFooter: React.FC = () => {
             <Link to="/visualizer" className="hover:text-text transition-colors">Visualizer</Link>
             <Link to="/benchmark" className="hover:text-text transition-colors">Benchmark</Link>
             <Link to="/lab" className="hover:text-text transition-colors">ML Lab</Link>
-            <Link to="/about" className="hover:text-text transition-colors">About</Link>
+            <Link to="/learn/glossary" className="hover:text-text transition-colors">About &amp; Glossary</Link>
           </div>
 
           <div className="flex flex-col gap-2">

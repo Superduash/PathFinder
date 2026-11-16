@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
+import { AlertTriangle } from "lucide-react";
 import { ALGORITHMS, ALGORITHM_VISUALS, getAlgorithmColor } from "@/lib/palette";
 import { notify } from "@/lib/notify";
 
@@ -165,8 +166,9 @@ export const RacerPicker: React.FC<RacerPickerProps> = ({
                     ))}
                   </select>
                   {participant?.heuristic === "manhattan" && diagonal && (
-                    <span className="text-xs text-amber-500 block mt-0.5">
-                      ⚠️ Inadmissible with diagonals
+                    <span className="text-xs text-amber-500 flex items-center gap-1 mt-0.5">
+                      <AlertTriangle className="w-3 h-3 shrink-0" />
+                      <span>Inadmissible with diagonals</span>
                     </span>
                   )}
                 </div>

@@ -17,6 +17,12 @@ export interface AlgorithmMeta {
   plain?: string | any;
   shape?: string | any;
   color_key?: string | any;
+  informed?: boolean;
+  family?: string;
+  data_structure?: string | any;
+  picks_next?: string | any;
+  uses_hint?: boolean;
+  full_name?: string | any;
 }
 
 export interface BenchmarkConfig {
@@ -127,11 +133,6 @@ export interface JobStatus {
   error?: any | any;
 }
 
-export interface LearnRunRequest {
-  snippet: string;
-  maze: Maze;
-}
-
 export interface Maze {
   rows: number;
   cols: number;
@@ -147,6 +148,10 @@ export interface MazeMeta {
   generator?: string;
   seed?: number | any;
   preset?: string | any;
+  seed_used?: number | any;
+  retries?: number;
+  cycles?: number | any;
+  loop_fraction?: number | any;
 }
 
 export interface MetaResponse {
@@ -168,6 +173,21 @@ export interface MethodologyResponse {
   timing: string;
   summaries: string;
   quality: string;
+}
+
+export interface RaceResult {
+  id: number;
+  algorithm: string;
+  heuristic: string | null;
+  label: string;
+  status: string;
+  reason?: string | null;
+  checked: number;
+  route_steps: number | null;
+  route_cost: number | null;
+  quality: number | null;
+  search_ms: number;
+  rank?: number;
 }
 
 export interface PresetMazeRequest {

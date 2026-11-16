@@ -29,11 +29,11 @@ const TILES: TileItem[] = [
   {
     id: "wall",
     label: "Wall",
-    cost: "✕ Blocked",
+    cost: "Blocked",
     desc: "You cannot walk through walls.",
     icon: <Square className="w-4 h-4 fill-current" />,
     colorClass: "bg-surface-2 border-border text-text hover:bg-surface-2/80",
-    costClass: "bg-danger/15 text-danger border-danger/30",
+    costClass: "bg-red-100 text-red-800 border-red-300 dark:bg-danger/15 dark:text-danger dark:border-danger/30",
   },
   {
     id: "erase",
@@ -49,36 +49,44 @@ const TILES: TileItem[] = [
     label: "Sand",
     cost: "Cost: 3",
     desc: "Slow ground. Stepping on sand costs 3.",
-    icon: <Sparkles className="w-4 h-4 text-amber-500" />,
-    colorClass: "bg-amber-950/20 border-amber-800/40 text-amber-400 hover:bg-amber-900/30",
-    costClass: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+    icon: <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />,
+    colorClass:
+      "bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100/80 dark:bg-amber-950/30 dark:border-amber-800/50 dark:text-amber-300 dark:hover:bg-amber-900/40",
+    costClass:
+      "bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-500/15 dark:border-amber-500/30 dark:text-amber-300",
   },
   {
     id: "water",
     label: "Water",
     cost: "Cost: 5",
     desc: "Very slow ground. Stepping on water costs 5.",
-    icon: <Waves className="w-4 h-4 text-blue-500" />,
-    colorClass: "bg-blue-950/20 border-blue-800/40 text-blue-400 hover:bg-blue-900/30",
-    costClass: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+    icon: <Waves className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
+    colorClass:
+      "bg-blue-50 border-blue-200 text-blue-900 hover:bg-blue-100/80 dark:bg-blue-950/30 dark:border-blue-800/50 dark:text-blue-300 dark:hover:bg-blue-900/40",
+    costClass:
+      "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/15 dark:border-blue-500/30 dark:text-blue-300",
   },
   {
     id: "start",
     label: "Start",
     cost: "Origin",
     desc: "Where every racer begins. Click to place.",
-    icon: <Flag className="w-4 h-4 text-emerald-500" />,
-    colorClass: "bg-emerald-950/20 border-emerald-800/40 text-emerald-400 hover:bg-emerald-900/30",
-    costClass: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+    icon: <Flag className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
+    colorClass:
+      "bg-emerald-50 border-emerald-200 text-emerald-900 hover:bg-emerald-100/80 dark:bg-emerald-950/30 dark:border-emerald-800/50 dark:text-emerald-300 dark:hover:bg-emerald-900/40",
+    costClass:
+      "bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-500/15 dark:border-emerald-500/30 dark:text-emerald-300",
   },
   {
     id: "goal",
     label: "Goal",
     cost: "Target",
     desc: "The destination racers seek.",
-    icon: <Target className="w-4 h-4 text-red-500" />,
-    colorClass: "bg-red-950/20 border-red-800/40 text-red-400 hover:bg-red-900/30",
-    costClass: "bg-red-500/15 text-red-400 border-red-500/30",
+    icon: <Target className="w-4 h-4 text-rose-600 dark:text-rose-400" />,
+    colorClass:
+      "bg-rose-50 border-rose-200 text-rose-900 hover:bg-rose-100/80 dark:bg-red-950/30 dark:border-red-800/50 dark:text-rose-300 dark:hover:bg-red-900/40",
+    costClass:
+      "bg-rose-100 border-rose-300 text-rose-800 dark:bg-red-500/15 dark:border-red-500/30 dark:text-rose-300",
   },
 ];
 
@@ -108,7 +116,7 @@ export const TilePalette: React.FC<TilePaletteProps> = ({
               className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 min-w-0 p-2 rounded-lg border text-xs font-semibold transition-all overflow-visible ${
                 isActive
                   ? "border-brand bg-brand/10 ring-1 ring-brand text-brand shadow-xs"
-                  : `${t.colorClass} border-transparent`
+                  : t.colorClass
               } ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
             >
               <div className="contents">

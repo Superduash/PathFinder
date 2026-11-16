@@ -73,7 +73,9 @@ export class RaceSocket {
         }
         this.emit("message", msg);
       } catch (err) {
-        console.error("Failed to parse websocket message", err);
+        if (import.meta.env.DEV) {
+          console.warn("Failed to parse websocket message", err);
+        }
       }
     };
 

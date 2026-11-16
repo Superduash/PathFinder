@@ -296,6 +296,7 @@ class RaceSummaryMessage(BaseModel):
     type: Literal["race.summary"] = "race.summary"
     raceId: str
     participants: list[ParticipantState]
+    results: list[dict] = Field(default_factory=list)  # Added for polish7
     ranking: list[int]   # indices into participants, best first
     insights: list[dict] = Field(default_factory=list)
     winner_reason: Optional[str] = None
@@ -405,6 +406,12 @@ class AlgorithmMeta(BaseModel):
     plain: Optional[str] = None
     shape: Optional[str] = None
     color_key: Optional[str] = None
+    informed: bool = False
+    family: str = "Uninformed (blind) search"
+    data_structure: Optional[str] = None
+    picks_next: Optional[str] = None
+    uses_hint: bool = False
+    full_name: Optional[str] = None
 
 
 class MetaResponse(BaseModel):

@@ -9,6 +9,7 @@ import {
   FolderArchive,
   Check,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useJob } from "@/hooks/useJob";
@@ -271,7 +272,7 @@ export const MLLabPage: React.FC = () => {
                     {/* Critical admissibility warning */}
                     <div className="p-4 rounded-lg border border-warn/40 bg-warn/10 text-sm">
                       <p className="text-text font-bold flex items-center gap-2">
-                        <span className="text-warn text-lg">⚠️</span>
+                        <AlertTriangle className="w-4 h-4 text-warn shrink-0" />
                         Lower MAE does NOT guarantee admissible heuristics
                       </p>
                       <ul className="text-muted text-xs mt-2 space-y-1.5 list-disc list-inside">
@@ -346,11 +347,14 @@ export const MLLabPage: React.FC = () => {
                           
                           {astarCompareResult.warnings && astarCompareResult.warnings.length > 0 && (
                             <div className="flex flex-col gap-1.5 p-3 rounded-lg border border-border bg-surface-2/60">
-                              {astarCompareResult.warnings.map((w: string, idx: number) => (
-                                <div key={idx} className="flex items-start gap-2 text-xs">
-                                  <span className={w.startsWith('⚠️') ? 'text-warn' : 'text-success'}>{w}</span>
-                                </div>
-                              ))}
+                              {astarCompareResult.warnings.map((w: string, idx: number) => {
+                                const clean = w.replace(/^\u26A0\uFE0F?\s*/, "");
+                                return (
+                                  <div key={idx} className="flex items-start gap-2 text-xs">
+                                    <span className="text-warn">{clean}</span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -443,8 +447,8 @@ export const MLLabPage: React.FC = () => {
                     }`}>
                       <p className="text-text font-medium">
                         {clsResult.metrics.accuracy > clsResult.baseline_accuracy + 0.05
-                          ? '✓ Classifier beats baseline'
-                          : '⚠️ Classifier does not meaningfully outperform baseline'}
+                          ? 'Classifier beats baseline'
+                          : 'Classifier does not meaningfully outperform baseline'}
                       </p>
                       <ul className="text-muted text-xs mt-2 space-y-1.5 list-disc list-inside">
                         <li><strong>Decision Tree:</strong> {Math.round(clsResult.metrics.accuracy * 100)}% accuracy by learning maze features (size, density, terrain)</li>
