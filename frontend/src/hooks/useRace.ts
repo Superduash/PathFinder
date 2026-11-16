@@ -265,9 +265,11 @@ export function useRace(maze: Maze | null, participants: Participant[], speedLev
       isRunningRef.current = true;
       setRaceState("running");
     } else {
+      // Set to ready immediately to show we're initializing
+      setRaceState("ready");
       initRace();
       isRunningRef.current = true;
-      setRaceState("running");
+      // State will transition to "running" after race.ready event
     }
   };
 

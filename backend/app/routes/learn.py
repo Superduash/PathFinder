@@ -68,7 +68,11 @@ _WALKTHROUGH_CACHE: dict[tuple[str, str], dict] = {}
 def get_walkthrough(
     algorithm: str = Query("bfs"),
     scenario: str = Query("tiny"),
+    _clear_cache: bool = Query(False, alias="clear_cache"),
 ) -> dict:
+    if _clear_cache:
+        _WALKTHROUGH_CACHE.clear()
+        
     cache_key = (algorithm.lower(), scenario.lower())
     if cache_key in _WALKTHROUGH_CACHE:
         return _WALKTHROUGH_CACHE[cache_key]
@@ -88,8 +92,13 @@ def get_walkthrough(
     step_num = 0
 
     while search.status in ("init", "running") and step_num < 80:
-        step_num += 1
         search.step()
+        step_num += 1
+        
+        # Stop if we found the goal
+        if search.status == "found":
+            break
+            
         curr = search.trace[-1] if search.trace else None
         curr_idx = (curr[0] * grid.cols + curr[1]) if curr else None
 

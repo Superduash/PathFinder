@@ -15,7 +15,6 @@ from backend.app.ml.store import ml_store
 CANDIDATES = [
     {"name": "bfs", "algorithm": "bfs", "heuristic": None},
     {"name": "astar_manhattan", "algorithm": "astar", "heuristic": "manhattan"},
-    {"name": "astar_octile", "algorithm": "astar", "heuristic": "octile"},
     {"name": "greedy", "algorithm": "greedy", "heuristic": "manhattan"},
     {"name": "bds", "algorithm": "bds", "heuristic": None},
 ]
@@ -32,17 +31,11 @@ def train_classification(job, config: ClassificationConfig) -> ClassificationRes
             return None
 
         seed = (config.seed * 31337 + m_idx) % (2**31)
-        # Vary maze characteristics more aggressively
-        dens = 0.10 + (m_idx % 6) * 0.10  # 10%, 20%, 30%, 40%, 50%, 60%
-        m_type = ["backtracker", "random", "recursive_division"][m_idx % 3]
-        size = 12 + (m_idx % 5) * 3  # 12, 15, 18, 21, 24
-        weighted = (m_idx % 3) != 0  # 2/3 weighted, 1/3 unweighted
-        diagonal = (m_idx % 4) == 0  # 1/4 diagonal
-        
+        dens = 0.15 + (m_idx % 4) * 0.08
+        m_type = "backtracker" if m_idx % 2 == 0 else "random"
         from backend.app.search.reference import is_reachable
         for retry in range(20):
-            maze = generate(type=m_type, rows=size, cols=size, density=dens, weighted=weighted, seed=seed)
-            maze.diagonal = diagonal
+            maze = generate(type=m_type, rows=15, cols=15, density=dens, weighted=True, seed=seed)
             if is_reachable(maze):
                 break
             seed = (seed * 1_000_003 + retry + 1) % (2**31)

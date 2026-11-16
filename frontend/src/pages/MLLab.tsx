@@ -82,11 +82,6 @@ export const MLLabPage: React.FC = () => {
   };
 
   const handleDeleteModel = async (id: number) => {
-    const model = modelsList.find(m => m.id === id);
-    if (model?.is_active) {
-      notify.warning("Cannot delete active model. Activate a different model first.");
-      return;
-    }
     try {
       await request(`/api/ml/models/${id}`, { method: "DELETE" });
       notify.info(`Deleted model #${id}`);
@@ -214,18 +209,6 @@ export const MLLabPage: React.FC = () => {
       {/* 1. LEARN A HINT (REGRESSION) */}
       {activeTab === "regression" && (
         <div className="flex flex-col gap-6">
-          {/* Educational Context Banner */}
-          <div className="p-5 rounded-xl border border-brand/30 bg-gradient-to-r from-brand/5 to-brand/10">
-            <h3 className="text-base font-bold text-text mb-2">🎯 Goal: Learn better distance estimates</h3>
-            <p className="text-sm text-muted leading-relaxed">
-              Can a model predict true distance better than Manhattan heuristic by learning from maze topology?
-              We train regression models on random mazes and compare their mean absolute error (MAE).
-              <span className="block mt-2 text-warn font-medium">
-                ⚠️ Critical: Lower MAE ≠ admissible heuristic. Even rare overestimation breaks A* optimality guarantees.
-              </span>
-            </p>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Parameters & Train Card */}
             <Card className="h-fit">
@@ -362,25 +345,12 @@ export const MLLabPage: React.FC = () => {
                           </div>
                           
                           {astarCompareResult.warnings && astarCompareResult.warnings.length > 0 && (
-                            <div className="flex flex-col gap-2 p-4 rounded-lg border border-warn/30 bg-warn/5">
-                              <span className="text-xs font-bold uppercase text-warn tracking-wider">Analysis</span>
-                              {astarCompareResult.warnings.map((w: string, idx: number) => {
-                                const isWarning = w.startsWith('⚠️');
-                                return (
-                                  <div key={idx} className="flex items-start gap-2 text-xs leading-relaxed">
-                                    <span className={isWarning ? 'text-warn font-medium' : 'text-success font-medium'}>
-                                      {w}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                              {(astarCompareResult.learned_astar.optimality || 0) < 0.999 && (
-                                <div className="mt-2 pt-2 border-t border-warn/20 text-xs text-muted">
-                                  <strong className="text-warn">Why this matters:</strong> A* with an admissible heuristic is <em>guaranteed</em> to find 
-                                  the optimal path. The learned heuristic overestimated distance on some cells, causing A* to 
-                                  skip the optimal route. This demonstrates why MAE alone is insufficient for evaluating heuristic quality.
+                            <div className="flex flex-col gap-1.5 p-3 rounded-lg border border-border bg-surface-2/60">
+                              {astarCompareResult.warnings.map((w: string, idx: number) => (
+                                <div key={idx} className="flex items-start gap-2 text-xs">
+                                  <span className={w.startsWith('⚠️') ? 'text-warn' : 'text-success'}>{w}</span>
                                 </div>
-                              )}
+                              ))}
                             </div>
                           )}
                         </div>
@@ -401,18 +371,6 @@ export const MLLabPage: React.FC = () => {
       {/* 2. PICK THE BEST ALGORITHM (CLASSIFICATION) */}
       {activeTab === "classification" && (
         <div className="flex flex-col gap-6">
-          {/* Educational Context Banner */}
-          <div className="p-5 rounded-xl border border-brand/30 bg-gradient-to-r from-brand/5 to-brand/10">
-            <h3 className="text-base font-bold text-text mb-2">🎯 Goal: Predict which algorithm wins</h3>
-            <p className="text-sm text-muted leading-relaxed">
-              Can maze features (size, density, terrain, start-goal distance) predict which algorithm will expand the fewest nodes?
-              We train a decision tree classifier and compare against a baseline that always picks the most common winner.
-              <span className="block mt-2 text-text font-medium">
-                A useful classifier should beat baseline by at least 5-10 percentage points — otherwise it's not learning meaningful patterns.
-              </span>
-            </p>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="h-fit">
               <CardHeader>
@@ -428,7 +386,7 @@ export const MLLabPage: React.FC = () => {
                   </div>
                 </div>
                 <CardDescription>
-                  Trains a decision tree to predict which algorithm expands the fewest nodes. Evaluated against a baseline that always picks the most common winner.
+                  Trains a decision tree to classify which algorithm expands the fewest nodes on unseen mazes.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-5">
@@ -469,9 +427,9 @@ export const MLLabPage: React.FC = () => {
 
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle>Classifier Evaluation vs Baseline</CardTitle>
+                <CardTitle>Decision Tree Accuracy vs Majority Baseline</CardTitle>
                 <CardDescription>
-                  Can maze features predict which algorithm will perform best? Tested on unseen validation mazes.
+                  Evaluated on unseen validation mazes generated by independent seeds.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-6">
