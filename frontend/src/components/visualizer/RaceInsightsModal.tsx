@@ -40,43 +40,51 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
 
   if (!isOpen || !summary) return null;
 
-  const winner = summary.awards?.best_overall?.id;
-  const winnerScore = summary.awards?.best_overall?.score;
-  const winnerData = winner !== undefined && winner !== null ? summary.participants[winner] : null;
-
-  // Calculate scores for all successful participants
+  // Calculate scores for ALL successful participants using backend's scoring logic
   const successfulIndices = summary.participants
     .map((p: any, i: number) => ({ index: i, participant: p }))
     .filter((item: any) => item.participant.status === "found");
 
-  const scores: { [key: number]: number } = {};
+  const scores: { [key: number]: { total: number; quality: number; efficiency: number; speed: number } } = {};
   
   if (successfulIndices.length > 0) {
     // Find best values for normalization
     const minCost = Math.min(...successfulIndices.map((item: any) => item.participant.pathCost || Infinity));
     const minExpanded = Math.min(...successfulIndices.map((item: any) => item.participant.expanded));
+    const minTime = Math.min(...successfulIndices.map((item: any) => item.participant.compute_ms || Infinity));
 
     successfulIndices.forEach((item: any) => {
       const cost = item.participant.pathCost || Infinity;
       const expanded = item.participant.expanded;
+      const time = item.participant.compute_ms || Infinity;
 
       // Normalize each metric (100 = best)
-      const qualityScore = 100.0 * (minCost / cost);
+      const qualityScore = cost !== Infinity ? 100.0 * (minCost / cost) : 0;
       const efficiencyScore = 100.0 * (minExpanded / expanded);
-      const speedScore = 100.0; // Placeholder
+      const speedScore = time !== Infinity ? 100.0 * (minTime / time) : 0;
 
       // Weighted combination: 40% quality, 35% efficiency, 25% speed
       const totalScore = 0.40 * qualityScore + 0.35 * efficiencyScore + 0.25 * speedScore;
-      scores[item.index] = totalScore;
+      
+      scores[item.index] = {
+        total: totalScore,
+        quality: qualityScore,
+        efficiency: efficiencyScore,
+        speed: speedScore,
+      };
     });
   }
 
-  // Find runner-up (second highest score)
+  // Sort by score to find winner and runner-up
   const sortedByScore = [...successfulIndices].sort((a: any, b: any) => {
-    const scoreA = scores[a.index] || 0;
-    const scoreB = scores[b.index] || 0;
+    const scoreA = scores[a.index]?.total || 0;
+    const scoreB = scores[b.index]?.total || 0;
     return scoreB - scoreA;
   });
+
+  const winner = sortedByScore.length > 0 ? sortedByScore[0].index : summary.awards?.best_overall?.id;
+  const winnerData = winner !== undefined && winner !== null ? summary.participants[winner] : null;
+  const winnerScore = winner !== undefined && winner !== null ? scores[winner] : undefined;
 
   const runnerUp = sortedByScore.length > 1 ? sortedByScore[1].index : null;
   const runnerUpData = runnerUp !== null ? summary.participants[runnerUp] : null;
@@ -91,34 +99,50 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
   };
 
   const generateComparison = () => {
-    if (!winnerData || !runnerUpData) return "";
+    if (!winnerData || !runnerUpData || !winnerScore || !runnerUpScore) return "";
 
     const winnerAlg = getAlgorithmName(winnerData.algorithm);
 
-    const winnerCost = winnerData.pathCost || 0;
-    const runnerUpCost = runnerUpData.pathCost || 0;
-    const winnerExpanded = winnerData.expanded;
-    const runnerUpExpanded = runnerUpData.expanded;
-
     const parts = [];
 
-    if (winnerExpanded < runnerUpExpanded) {
-      const ratio = Math.round((runnerUpExpanded / winnerExpanded) * 10) / 10;
-      parts.push(`explored ${ratio}× fewer cells`);
+    // Compare efficiency
+    if (winnerScore.efficiency > runnerUpScore.efficiency + 5) {
+      const ratio = (runnerUpData.expanded / winnerData.expanded).toFixed(1);
+      parts.push(`explored ${ratio}× fewer cells than ${getAlgorithmName(runnerUpData.algorithm)}`);
     }
 
-    if (winnerCost > runnerUpCost) {
-      const diff = Math.round(((winnerCost / runnerUpCost - 1) * 100) * 10) / 10;
-      parts.push(`found a ${diff}% more expensive route`);
-    } else if (runnerUpCost > winnerCost) {
-      parts.push(`found a lower-cost route`);
+    // Compare speed
+    if (winnerScore.speed > runnerUpScore.speed + 5 && winnerData.compute_ms && runnerUpData.compute_ms) {
+      const ratio = (runnerUpData.compute_ms / winnerData.compute_ms).toFixed(1);
+      parts.push(`ran ${ratio}× faster`);
+    }
+
+    // Compare path quality
+    const winnerCost = winnerData.pathCost || 0;
+    const runnerUpCost = runnerUpData.pathCost || 0;
+    
+    if (winnerCost > 0 && runnerUpCost > 0) {
+      if (winnerCost > runnerUpCost * 1.05) {
+        const diff = Math.round(((winnerCost / runnerUpCost - 1) * 100) * 10) / 10;
+        parts.push(`but found a ${diff}% more expensive route`);
+      } else if (runnerUpCost > winnerCost * 1.05) {
+        const diff = Math.round(((runnerUpCost / winnerCost - 1) * 100) * 10) / 10;
+        parts.push(`and found a ${diff}% cheaper route`);
+      }
     }
 
     if (parts.length === 0) {
-      return `${winnerAlg} won through balanced performance across all metrics.`;
+      return `${winnerAlg} won with balanced performance across all metrics (score: ${winnerScore.total.toFixed(1)}).`;
     }
 
-    return `${winnerAlg} won because it ${parts[0]}${parts.length > 1 ? `, but ${parts[1]}` : ""}.`;
+    const mainPart = parts[0];
+    const additionalParts = parts.slice(1);
+    
+    if (additionalParts.length === 0) {
+      return `${winnerAlg} won because it ${mainPart}.`;
+    }
+
+    return `${winnerAlg} won because it ${mainPart}, ${additionalParts.join(", ")}.`;
   };
 
   const generateTakeaway = () => {
@@ -177,7 +201,7 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
 
         <div className="p-6 space-y-6">
           {/* Winner Section */}
-          {winnerData && (
+          {winnerData && winnerScore && (
             <div
               className="border-2 rounded-xl p-5"
               style={{
@@ -202,7 +226,7 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
                 </div>
                 <div className="text-right">
                   <div className="text-4xl font-bold font-display" style={{ color: getAlgorithmColor(winnerData.algorithm).main }}>
-                    {winnerScore !== undefined && !isNaN(winnerScore) ? winnerScore.toFixed(1) : "—"}
+                    {winnerScore.total.toFixed(1)}
                   </div>
                   <div className="text-xs text-muted">Weighted score</div>
                 </div>
@@ -216,16 +240,16 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
                 <MetricCard label="Cells checked" value={winnerData.expanded} />
                 <MetricCard
                   label="Route cost"
-                  value={winnerData.pathCost !== undefined && winnerData.pathCost !== null ? winnerData.pathCost.toFixed(1) : "—"}
+                  value={winnerData.pathCost !== undefined && winnerData.pathCost !== null ? winnerData.pathCost.toFixed(1) : "N/A"}
                   highlight={winnerData.optimality === 1.0}
                 />
-                <MetricCard label="Path length" value={winnerData.pathLength !== undefined && winnerData.pathLength !== null ? winnerData.pathLength : "—"} />
+                <MetricCard label="Path length" value={winnerData.pathLength !== undefined && winnerData.pathLength !== null ? winnerData.pathLength : "N/A"} />
               </div>
             </div>
           )}
 
           {/* Runner-up Section */}
-          {runnerUpData && runnerUpScore !== undefined && (
+          {runnerUpData && runnerUpScore && (
             <div className="border rounded-xl p-5 bg-surface-2 border-border">
               <div className="flex items-start gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-surface-3">
@@ -241,7 +265,7 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
                 </div>
                 <div className="text-right">
                   <div className="text-3xl font-bold font-display text-text">
-                    {runnerUpScore !== undefined && !isNaN(runnerUpScore) ? runnerUpScore.toFixed(1) : "—"}
+                    {runnerUpScore.total.toFixed(1)}
                   </div>
                   <div className="text-xs text-muted">Score</div>
                 </div>
@@ -257,10 +281,10 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
                 <MetricCard label="Cells checked" value={runnerUpData.expanded} />
                 <MetricCard
                   label="Route cost"
-                  value={runnerUpData.pathCost !== undefined && runnerUpData.pathCost !== null ? runnerUpData.pathCost.toFixed(1) : "—"}
+                  value={runnerUpData.pathCost !== undefined && runnerUpData.pathCost !== null ? runnerUpData.pathCost.toFixed(1) : "N/A"}
                   highlight={runnerUpData.optimality === 1.0}
                 />
-                <MetricCard label="Path length" value={runnerUpData.pathLength !== undefined && runnerUpData.pathLength !== null ? runnerUpData.pathLength : "—"} />
+                <MetricCard label="Path length" value={runnerUpData.pathLength !== undefined && runnerUpData.pathLength !== null ? runnerUpData.pathLength : "N/A"} />
               </div>
             </div>
           )}
@@ -298,28 +322,42 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
           </div>
 
           {/* Compare All Racers (Expandable) */}
-          {summary.participants.length > 2 && (
-            <div className="border border-border rounded-xl overflow-hidden">
-              <button
-                onClick={() => setShowAllRacers(!showAllRacers)}
-                className="w-full px-5 py-3 flex items-center justify-between bg-surface-2 hover:bg-surface-3 transition-colors"
-              >
-                <span className="text-sm font-bold font-display text-text">
-                  Compare All {summary.participants.length} Racers
-                </span>
-                {showAllRacers ? (
-                  <ChevronUp className="w-4 h-4 text-muted" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-muted" />
-                )}
-              </button>
+          <div className="border border-border rounded-xl overflow-hidden">
+            <button
+              onClick={() => setShowAllRacers(!showAllRacers)}
+              className="w-full px-5 py-3 flex items-center justify-between bg-surface-2 hover:bg-surface-3 transition-colors"
+            >
+              <span className="text-sm font-bold font-display text-text">
+                Compare All {summary.participants.length} Racers
+              </span>
+              {showAllRacers ? (
+                <ChevronUp className="w-4 h-4 text-muted" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted" />
+              )}
+            </button>
 
-              {showAllRacers && (
-                <div className="p-5 bg-surface space-y-3">
-                  {summary.participants.map((p: any, i: number) => {
+            {showAllRacers && (
+              <div className="p-5 bg-surface space-y-3">
+                {/* Sort ALL participants by score (successful first, then failed) */}
+                {summary.participants
+                  .map((p: any, i: number) => ({ participant: p, index: i, score: scores[i] }))
+                  .sort((a: any, b: any) => {
+                    // Successful searches first
+                    if (a.participant.status === "found" && b.participant.status !== "found") return -1;
+                    if (a.participant.status !== "found" && b.participant.status === "found") return 1;
+                    // Then by score
+                    const scoreA = a.score?.total || 0;
+                    const scoreB = b.score?.total || 0;
+                    return scoreB - scoreA;
+                  })
+                  .map((item: any, rank: number) => {
+                    const p = item.participant;
+                    const i = item.index;
                     const colors = getAlgorithmColor(p.algorithm);
                     const isWinner = i === winner;
                     const isRunnerUp = i === runnerUp;
+                    const score = item.score;
 
                     return (
                       <div
@@ -331,7 +369,7 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
                         }}
                       >
                         <div className="flex-shrink-0 w-8 text-center">
-                          <span className="text-sm font-bold text-muted">#{i + 1}</span>
+                          <span className="text-sm font-bold text-muted">#{rank + 1}</span>
                         </div>
                         <div className="flex-1">
                           <div className="text-sm font-bold font-display text-text">
@@ -341,17 +379,22 @@ export const RaceInsightsModal: React.FC<RaceInsightsModalProps> = ({
                           </div>
                           <div className="text-xs text-muted">
                             {p.status === "found"
-                              ? `${p.expanded} cells · Cost ${p.pathCost !== undefined && p.pathCost !== null ? p.pathCost.toFixed(1) : "—"} · ${p.optimality === 1.0 ? "Optimal" : "Suboptimal"}`
+                              ? `${p.expanded} cells · Cost ${p.pathCost !== undefined && p.pathCost !== null ? p.pathCost.toFixed(1) : "N/A"} · ${p.optimality === 1.0 ? "Optimal" : p.optimality && p.optimality > 0.95 ? "Near-optimal" : "Suboptimal"}`
                               : "Failed to find route"}
                           </div>
                         </div>
+                        {score && (
+                          <div className="flex-shrink-0 text-right">
+                            <div className="text-sm font-bold font-mono text-text">{score.total.toFixed(1)}</div>
+                            <div className="text-xs text-muted">Score</div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="flex gap-3">

@@ -29,7 +29,13 @@ def train_regression(job, config: RegressionConfig) -> RegressionResult:
             return None
 
         seed = (config.seed * 10007 + m_idx) % (2**31)
-        maze = generate(type="random", rows=15, cols=15, density=0.2, weighted=True, seed=seed)
+        # Vary maze characteristics for better generalization
+        dens = 0.10 + (m_idx % 5) * 0.10  # 10%, 20%, 30%, 40%, 50%
+        size = 12 + (m_idx % 4) * 3  # 12, 15, 18, 21
+        m_type = ["backtracker", "random"][m_idx % 2]
+        weighted = (m_idx % 3) != 0  # 2/3 weighted, 1/3 unweighted
+        
+        maze = generate(type=m_type, rows=size, cols=size, density=dens, weighted=weighted, seed=seed)
 
         # Compute cost-to-goal reverse map or sample pairs
         open_cells = [
