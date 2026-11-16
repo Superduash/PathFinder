@@ -51,16 +51,38 @@ export interface ScenarioMeta {
 }
 
 export function foldFrames(data: Walkthrough, upTo: number) {
-  const cols = data.scenario.cols;
-  const key = (i: number) => `${Math.floor(i / cols)},${i % cols}`;
   const explored = new Set<string>();
   const frontier = new Set<string>();
   const info = new Map<string, CellInfo>();
   let order = 0;
 
+  if (!data || !Array.isArray(data.frames)) {
+    return { explored, frontier, info };
+  }
+
+  const cols =
+    typeof data.scenario === "object" && data.scenario?.cols ? data.scenario.cols : 21;
+  const key = (i: number) => `${Math.floor(i / cols)},${i % cols}`;
+
   for (let n = 0; n <= upTo && n < data.frames.length; n++) {
     const f = data.frames[n];
-    for (const [idx, g, h, fv, side] of f.discovered) {
+    if (!f) continue;
+
+    // Handle both tuple format [idx, g, h, f, side] and object format {idx, g, h, f}
+    const rawDiscovered = f.discovered;
+    const discovered: Array<[number, number, number | null, number | null, string | null]> = [];
+    if (Array.isArray(rawDiscovered)) {
+      for (const item of rawDiscovered) {
+        if (Array.isArray(item)) {
+          discovered.push(item as [number, number, number | null, number | null, string | null]);
+        } else if (item && typeof item === "object" && "idx" in item) {
+          const obj = item as { idx: number; g: number; h: number | null; f: number | null };
+          discovered.push([obj.idx, obj.g, obj.h, obj.f, null]);
+        }
+      }
+    }
+
+    for (const [idx, g, h, fv, side] of discovered) {
       const k = key(idx);
       if (!explored.has(k)) frontier.add(k);
       info.set(k, {
@@ -71,7 +93,9 @@ export function foldFrames(data: Walkthrough, upTo: number) {
         f: fv,
       } as any);
     }
-    for (const idx of f.expanded) {
+
+    const expanded = Array.isArray(f.expanded) ? f.expanded : [];
+    for (const idx of expanded) {
       const k = key(idx);
       frontier.delete(k);
       explored.add(k);

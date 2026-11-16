@@ -14,6 +14,7 @@ import { ALGORITHM_LESSONS } from "@/content/algorithms";
 import { Walkthrough } from "./Walkthrough";
 import { Tex } from "./Tex";
 import { CodeBlock } from "./CodeBlock";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import bfsCode from "@/content/snippets/bfs.py?raw";
 import dfsCode from "@/content/snippets/dfs.py?raw";
 import ucsCode from "@/content/snippets/ucs.py?raw";
@@ -83,7 +84,9 @@ export const AlgorithmLesson: React.FC<AlgorithmLessonProps> = ({ algorithmId })
           <h2 className="text-xl font-bold font-heading text-text">Interactive Walkthrough</h2>
           <span className="text-xs text-muted">21×21 interactive laboratory</span>
         </div>
-        <Walkthrough algorithm={algorithmId} meta={meta} />
+        <ErrorBoundary fallbackTitle="Walkthrough unavailable">
+          <Walkthrough algorithm={algorithmId} meta={meta} />
+        </ErrorBoundary>
       </div>
 
       {/* 3. How it decides */}

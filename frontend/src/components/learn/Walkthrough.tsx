@@ -80,11 +80,11 @@ export const Walkthrough: React.FC<WalkthroughProps> = ({
   }, [handlePrev, handleNext, handlePlayPause]);
 
   // Current frame info
-  const currentFrame = data?.frames[frameIdx] || null;
+  const currentFrame = data?.frames && Array.isArray(data.frames) ? data.frames[frameIdx] || null : null;
 
   const currentCoords = useMemo<[number, number] | null>(() => {
-    if (!currentFrame || currentFrame.current === null || !data) return null;
-    const cols = data.scenario.cols;
+    if (!currentFrame || currentFrame.current === null || currentFrame.current === undefined || !data || typeof data.scenario !== "object") return null;
+    const cols = data.scenario?.cols || 21;
     return [Math.floor(currentFrame.current / cols), currentFrame.current % cols];
   }, [currentFrame, data]);
 
@@ -98,13 +98,13 @@ export const Walkthrough: React.FC<WalkthroughProps> = ({
   const pathForCanvas = isLastFrame && data?.found && data.route ? data.route : null;
 
   const mazeObj = useMemo(() => {
-    if (!data) return null;
+    if (!data || typeof data.scenario !== "object" || !data.scenario?.cells) return null;
     return {
-      rows: data.scenario.rows,
-      cols: data.scenario.cols,
+      rows: data.scenario.rows || 21,
+      cols: data.scenario.cols || 21,
       cells: data.scenario.cells,
-      start: data.scenario.start,
-      goal: data.scenario.goal,
+      start: data.scenario.start || [1, 1],
+      goal: data.scenario.goal || [19, 19],
       diagonal: false,
       weighted: false,
       meta: {
@@ -205,7 +205,7 @@ export const Walkthrough: React.FC<WalkthroughProps> = ({
         <div className="p-12 text-center text-muted border border-border rounded-2xl bg-surface">
           Loading scenario walkthrough...
         </div>
-      ) : !data ? (
+      ) : !data || !Array.isArray(data.frames) || data.frames.length === 0 ? (
         <div className="p-12 text-center text-danger border border-border rounded-2xl bg-surface">
           Failed to load walkthrough.
         </div>
@@ -438,13 +438,13 @@ export const Walkthrough: React.FC<WalkthroughProps> = ({
             </div>
 
             {/* 3. Data Strip */}
-            {currentFrame && (
+            {currentFrame && currentFrame.queues && (
               <DataStrip
                 algorithm={algorithm}
                 dataStructureTitle={meta.structure}
-                cols={data.scenario.cols}
+                cols={data.scenario?.cols || 21}
                 queues={currentFrame.queues}
-                queueSize={currentFrame.queue_size}
+                queueSize={currentFrame.queue_size ?? {}}
               />
             )}
 

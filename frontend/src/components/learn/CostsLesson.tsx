@@ -2,6 +2,7 @@ import React from "react";
 import { Tex } from "./Tex";
 import { Walkthrough } from "./Walkthrough";
 import { ALGORITHM_LESSONS } from "@/content/algorithms";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 export const CostsLesson: React.FC = () => {
   const astarMeta = ALGORITHM_LESSONS.astar;
@@ -72,7 +73,9 @@ export const CostsLesson: React.FC = () => {
             Water costs 5 per step; sand costs 3. Notice how A* calculates total score f to choose between wading through water or crossing the sand bridge.
           </p>
         </div>
-        <Walkthrough algorithm="astar" meta={astarMeta} initialScenario="river" />
+        <ErrorBoundary fallbackTitle="Walkthrough unavailable">
+          <Walkthrough algorithm="astar" meta={astarMeta} initialScenario="river" />
+        </ErrorBoundary>
       </div>
     </div>
   );
