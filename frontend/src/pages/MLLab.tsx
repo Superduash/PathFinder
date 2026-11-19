@@ -36,7 +36,7 @@ export const MLLabPage: React.FC = () => {
 
   // Classification Job State
   const [clsJobId, setClsJobId] = useState<string | null>(null);
-  const [clsMazes, setClsMazes] = useState(80);
+  const [clsMazes, setClsMazes] = useState(400);
   const [clsResult, setClsResult] = useState<any>(null);
   const [predictResult, setPredictResult] = useState<any>(null);
 
@@ -401,9 +401,9 @@ export const MLLabPage: React.FC = () => {
                   </div>
                   <Slider
                     value={[clsMazes]}
-                    min={30}
-                    max={150}
-                    step={10}
+                    min={100}
+                    max={800}
+                    step={50}
                     onValueChange={([val]) => setClsMazes(val)}
                   />
                 </div>

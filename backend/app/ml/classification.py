@@ -1,5 +1,6 @@
 """Algorithm recommendation classification: DecisionTreeClassifier vs Majority baseline."""
 from __future__ import annotations
+import random
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier, export_text
 from sklearn.dummy import DummyClassifier
@@ -11,6 +12,7 @@ from backend.app.maze.generators import generate, ensure_solvable
 from backend.app.search.algorithms import create_search
 from backend.app.ml.features import extract_maze_features, CLASSIFICATION_FEATURE_NAMES
 from backend.app.ml.store import ml_store
+from backend.app.search.reference import is_reachable, dijkstra_optimal_cost
 
 CANDIDATES = [
     {"name": "bfs", "algorithm": "bfs", "heuristic": None},
@@ -18,6 +20,38 @@ CANDIDATES = [
     {"name": "greedy", "algorithm": "greedy", "heuristic": "manhattan"},
     {"name": "bds", "algorithm": "bds", "heuristic": None},
 ]
+
+# Training mix: mirrors what the app generates (all maze types, several sizes, with/without
+# weighted terrain). Training on one size/type made predictions fail on the default 21x21 "loops" maze.
+TRAIN_TYPES = ["backtracker", "random", "loops", "braided", "weighted"]
+TRAIN_SIZES = [11, 15, 21, 25, 31]
+TRAIN_DENSITIES = [0.15, 0.23, 0.31, 0.39]
+
+
+def pick_winner(maze, tolerance: float = 0.05):
+    """Single source of truth for the "best algorithm" label.
+
+    Winner = the candidate that expands the FEWEST nodes among those whose path cost
+    is within `tolerance` of the optimal cost C*. Used by both training and prediction,
+    so "actual winner" always matches how the model was trained.
+    """
+    c_star = dijkstra_optimal_cost(maze)
+    best_alg = None
+    min_exp = float("inf")
+
+    for c in CANDIDATES:
+        s = create_search(c["algorithm"], maze, heuristic=c["heuristic"])
+        s.run_to_completion()
+        if s.status != "found":
+            continue
+        if c_star is not None and s.path_cost is not None \
+                and s.path_cost > c_star * (1.0 + tolerance) + 1e-9:
+            continue  # path too costly -> not eligible to win
+        if s.expanded_count < min_exp:
+            min_exp = s.expanded_count
+            best_alg = c["name"]
+
+    return best_alg
 
 
 def train_classification(job, config: ClassificationConfig) -> ClassificationResult:
@@ -30,26 +64,20 @@ def train_classification(job, config: ClassificationConfig) -> ClassificationRes
         if getattr(job, "cancel_requested", False) or job.cancelled:
             return None
 
-        seed = (config.seed * 31337 + m_idx) % (2**31)
-        dens = 0.15 + (m_idx % 4) * 0.08
-        m_type = "backtracker" if m_idx % 2 == 0 else "random"
-        from backend.app.search.reference import is_reachable
+        rng = random.Random(config.seed * 31337 + m_idx)   # deterministic per maze
+        seed = rng.randrange(2**31)
+        m_type = TRAIN_TYPES[m_idx % len(TRAIN_TYPES)]
+        size = rng.choice(TRAIN_SIZES)
+        dens = rng.choice(TRAIN_DENSITIES)
+        weighted = rng.random() < 0.7
+
         for retry in range(20):
-            maze = generate(type=m_type, rows=15, cols=15, density=dens, weighted=True, seed=seed)
+            maze = generate(type=m_type, rows=size, cols=size, density=dens, weighted=weighted, seed=seed)
             if is_reachable(maze):
                 break
             seed = (seed * 1_000_003 + retry + 1) % (2**31)
 
-        # Run candidate algorithms and find winner by expanded_count
-        best_alg = None
-        min_exp = float("inf")
-
-        for c in CANDIDATES:
-            s = create_search(c["algorithm"], maze, heuristic=c["heuristic"])
-            s.run_to_completion()
-            if s.status == "found" and s.expanded_count < min_exp:
-                min_exp = s.expanded_count
-                best_alg = c["name"]
+        best_alg = pick_winner(maze, config.tolerance)
 
         if best_alg is not None:
             feat = extract_maze_features(maze)
@@ -79,6 +107,7 @@ def train_classification(job, config: ClassificationConfig) -> ClassificationRes
     # Decision tree
     dt = DecisionTreeClassifier(
         max_depth=5,
+        min_samples_leaf=3,
         criterion=config.criterion if config.criterion in ("gini", "entropy") else "gini",
         random_state=config.seed
     )
@@ -102,6 +131,10 @@ def train_classification(job, config: ClassificationConfig) -> ClassificationRes
     warnings = []
     if len(classes) == 1:
         warnings.append("Degenerate class distribution: only one algorithm won all mazes.")
+    if acc <= base_acc:
+        warnings.append("Model does not beat the majority-class baseline - use more training mazes.")
+    if len(y_test) < 60:
+        warnings.append(f"Small test set ({len(y_test)} mazes): accuracy is noisy. Use 300+ training mazes.")
 
     ml_store.set_classification(
         model=dt,
@@ -112,6 +145,7 @@ def train_classification(job, config: ClassificationConfig) -> ClassificationRes
             "accuracy": acc,
             "baseline_accuracy": base_acc,
             "class_distribution": class_dist,
+            "tolerance": config.tolerance,
         },
     )
 

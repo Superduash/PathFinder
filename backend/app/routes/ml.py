@@ -14,7 +14,7 @@ from backend.app.models import (
 )
 from backend.app.jobs import job_manager
 from backend.app.ml.regression import train_regression
-from backend.app.ml.classification import train_classification, CANDIDATES
+from backend.app.ml.classification import train_classification, pick_winner
 from backend.app.ml.features import extract_pair_features, extract_maze_features
 from backend.app.ml.store import ml_store
 from backend.app.maze.grid import MazeGrid
@@ -231,14 +231,8 @@ def api_predict_winner(payload: dict, db: Session = Depends(get_db)) -> dict:
     is_correct = None
     
     if run_actual:
-        min_exp = float("inf")
-        for c in CANDIDATES:
-            s = create_search(c["algorithm"], grid, heuristic=c["heuristic"])
-            s.run_to_completion()
-            if s.status == "found" and s.expanded_count < min_exp:
-                min_exp = s.expanded_count
-                actual_winner = c["name"]
-        
+        tol = (ml_store.classification_meta or {}).get("tolerance", 0.05)
+        actual_winner = pick_winner(grid, tol)
         is_correct = (str(prediction) == str(actual_winner)) if actual_winner else None
 
     return {

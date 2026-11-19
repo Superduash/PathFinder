@@ -65,7 +65,7 @@ def seed_demo():
         print("Demo benchmark seeded successfully!")
 
     print("Training Fast Regression Model...")
-    reg_cfg = RegressionConfig(name="Sample Regression (seeded)", n_mazes=20, samples_per_maze=5, seed=42)
+    reg_cfg = RegressionConfig(name="Sample Regression (seeded)", n_mazes=120, samples_per_maze=10, seed=42)
     reg_job = MockJob("demo_reg", "ml_regression")
     reg_res = train_regression(reg_job, reg_cfg)
     if reg_res:
@@ -83,7 +83,7 @@ def seed_demo():
         print("Demo regression model seeded successfully!")
 
     print("Training Fast Classification Model...")
-    cls_cfg = ClassificationConfig(name="Sample Classification (seeded)", n_mazes=25, seed=42)
+    cls_cfg = ClassificationConfig(name="Sample Classification (seeded)", n_mazes=500, seed=42)
     cls_job = MockJob("demo_cls", "ml_classification")
     cls_res = train_classification(cls_job, cls_cfg)
     if cls_res:
