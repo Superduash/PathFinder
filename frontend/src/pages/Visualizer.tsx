@@ -336,33 +336,35 @@ export const VisualizerPage: React.FC = () => {
   // User will click a button to view insights instead
 
   const toggleParticipant = (algId: string) => {
-    const exists = participants.some((p) => p.algorithm === algId);
-    if (exists) {
-      if (participants.length > 1) {
-        setParticipants(participants.filter((p) => p.algorithm !== algId));
+    setParticipants((prev) => {
+      const exists = prev.some((p) => p.algorithm === algId);
+      if (exists) {
+        if (prev.length > 1) {
+          return prev.filter((p) => p.algorithm !== algId);
+        } else {
+          notify.warning("At least one algorithm must be selected");
+          return prev;
+        }
       } else {
-        notify.warning("At least one algorithm must be selected");
+        if (prev.length < 6) {
+          return [
+            ...prev,
+            {
+              algorithm: algId,
+              heuristic: algId === "greedy" || algId === "astar" ? "manhattan" : null,
+            },
+          ];
+        } else {
+          notify.warning("Maximum 6 participants allowed");
+          return prev;
+        }
       }
-    } else {
-      if (participants.length < 6) {
-        setParticipants([
-          ...participants,
-          {
-            algorithm: algId,
-            heuristic: algId === "greedy" || algId === "astar" ? "manhattan" : null,
-          },
-        ]);
-      } else {
-        notify.warning("Maximum 6 participants allowed");
-      }
-    }
+    });
   };
 
   const handleUpdateHeuristic = (algId: string, heuristic: string) => {
-    setParticipants(
-      participants.map((p) =>
-        p.algorithm === algId ? { ...p, heuristic } : p
-      )
+    setParticipants((prev) =>
+      prev.map((p) => (p.algorithm === algId ? { ...p, heuristic } : p))
     );
   };
 

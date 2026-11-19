@@ -21,7 +21,7 @@ interface AppState {
   historyIndex: number;
   setMaze: (maze: Maze) => void;
   setSelectedTool: (tool: ToolType) => void;
-  setParticipants: (participants: Participant[]) => void;
+  setParticipants: (participants: Participant[] | ((prev: Participant[]) => Participant[])) => void;
   setSpeed: (speed: number) => void;
   setIsRaceMode: (isRace: boolean) => void;
   updateCell: (r: number, c: number, code: number) => void;
@@ -53,7 +53,13 @@ export const useAppStore = create<AppState>()(
       
       setSelectedTool: (selectedTool) => set({ selectedTool }),
       
-      setParticipants: (participants) => set({ participants }),
+      setParticipants: (participantsOrUpdater) => {
+        if (typeof participantsOrUpdater === "function") {
+          set((state) => ({ participants: participantsOrUpdater(state.participants) }));
+        } else {
+          set({ participants: participantsOrUpdater });
+        }
+      },
       
       setSpeed: (speed) => set({ speed }),
       
@@ -191,18 +197,30 @@ export const useAppStore = create<AppState>()(
     {
       name: "pathfinder-app-storage",
       storage: createJSONStorage(() => localStorage),
-      version: 2,
+      version: 3,
       migrate: (persistedState: any, version: number) => {
+        let base = persistedState || {};
         if (version < 2) {
-          return {
-            ...persistedState,
+          base = {
+            ...base,
             maze: null,
-            version: 2,
             history: [],
             historyIndex: -1,
           };
         }
-        return persistedState;
+        if (version < 3) {
+          // Reset participants to safe defaults to clear any corrupted state
+          base = {
+            ...base,
+            participants: [
+              { algorithm: "bfs" },
+              { algorithm: "astar", heuristic: "manhattan" },
+            ],
+            history: [],
+            historyIndex: -1,
+          };
+        }
+        return { ...base, version: 3 };
       },
       partialize: (state) => ({
         version: state.version,
